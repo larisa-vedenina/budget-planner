@@ -7,21 +7,21 @@ export class ChecklistItemModel {
     public title: string,
     public amount: number,
     public completed: boolean,
-    public category: 'mandatory' | 'optional',
-    public color: 'red' | 'yellow' | 'green' = 'green' // Цвет = Приоритет
+    public category: "mandatory" | "optional",
+    public color: "red" | "yellow" | "green" = "green" // Цвет = Приоритет
   ) {}
 
   /**
    * Создает новый пункт чек-листа с дефолтными значениями
    */
-  static createDefault(category: 'mandatory' | 'optional'): ChecklistItemModel {
+  static createDefault(category: "mandatory" | "optional"): ChecklistItemModel {
     return new ChecklistItemModel(
       Date.now().toString(),
-      'Новый пункт',
+      "Новый пункт",
       0,
       false,
       category,
-      'green' 
+      "green"
     );
   }
 
@@ -70,7 +70,7 @@ export class ChecklistItemModel {
   /**
    * Обновляет цвет/приоритет
    */
-  updateColor(newColor: 'red' | 'yellow' | 'green'): ChecklistItemModel {
+  updateColor(newColor: "red" | "yellow" | "green"): ChecklistItemModel {
     return new ChecklistItemModel(
       this.id,
       this.title,
@@ -86,10 +86,14 @@ export class ChecklistItemModel {
    */
   getSortPriority(): number {
     switch (this.color) {
-      case 'red': return 3;    // Высокий
-      case 'yellow': return 2; // Средний
-      case 'green': return 1;  // Низкий
-      default: return 1;
+      case "red":
+        return 3; // Высокий
+      case "yellow":
+        return 2; // Средний
+      case "green":
+        return 1; // Низкий
+      default:
+        return 1;
     }
   }
 }

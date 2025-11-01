@@ -5,7 +5,7 @@ export class NoteModel {
   constructor(
     public id: string,
     public content: string,
-    public type: 'ai' | 'user',
+    public type: "ai" | "user",
     public createdAt: Date = new Date()
   ) {}
 
@@ -14,9 +14,9 @@ export class NoteModel {
    */
   static createUserNote(): NoteModel {
     return new NoteModel(
-      Date.now().toString(),
-      'Новая заметка...',
-      'user'
+      `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // 👈 УНИКАЛЬНЫЙ ID
+      "Новая заметка...",
+      "user"
     );
   }
 
@@ -25,9 +25,9 @@ export class NoteModel {
    */
   static createAINote(content: string): NoteModel {
     return new NoteModel(
-      Date.now().toString(),
+      `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // 👈 УНИКАЛЬНЫЙ ID
       content,
-      'ai'
+      "ai"
     );
   }
 
@@ -35,18 +35,13 @@ export class NoteModel {
    * Обновляет содержимое заметки
    */
   updateContent(newContent: string): NoteModel {
-    return new NoteModel(
-      this.id,
-      newContent,
-      this.type,
-      this.createdAt
-    );
+    return new NoteModel(this.id, newContent, this.type, this.createdAt);
   }
 
   /**
    * Проверяет, является ли заметка AI-советом
    */
   isAIAdvice(): boolean {
-    return this.type === 'ai';
+    return this.type === "ai";
   }
 }

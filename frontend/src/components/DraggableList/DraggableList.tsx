@@ -1,6 +1,6 @@
-import React from 'react';
-import { Box } from '@mui/material';
-import { DragDropService } from '../../services/DragDropService';
+import React from "react";
+import { Box } from "@mui/material";
+import { DragDropService } from "../../services/DragDropService";
 
 interface DraggableListProps<T extends { id: string }> {
   items: T[];
@@ -9,17 +9,16 @@ interface DraggableListProps<T extends { id: string }> {
   isEditing: boolean;
 }
 
-/**
- * Универсальный компонент для списка с поддержкой drag & drop
- */
 function DraggableList<T extends { id: string }>({
   items,
   renderItem,
   onReorder,
-  isEditing
+  isEditing,
 }: DraggableListProps<T>) {
   const dragDropService = React.useRef(new DragDropService<T>());
-  const [draggedOverIndex, setDraggedOverIndex] = React.useState<number | null>(null);
+  const [draggedOverIndex, setDraggedOverIndex] = React.useState<number | null>(
+    null
+  );
 
   /**
    * Обрабатывает начало перетаскивания
@@ -30,6 +29,9 @@ function DraggableList<T extends { id: string }>({
     }
   };
 
+  /**
+   * Обрабатывает перетаскивание над элементом
+   */
   const handleDragOver = (e: React.DragEvent, index: number) => {
     if (isEditing) {
       e.preventDefault();
@@ -37,10 +39,16 @@ function DraggableList<T extends { id: string }>({
     }
   };
 
+  /**
+   * Обрабатывает уход с элемента
+   */
   const handleDragLeave = () => {
     setDraggedOverIndex(null);
   };
 
+  /**
+   * Обрабатывает отпускание элемента
+   */
   const handleDrop = (e: React.DragEvent, index: number) => {
     if (isEditing) {
       e.preventDefault();
@@ -52,6 +60,9 @@ function DraggableList<T extends { id: string }>({
     }
   };
 
+  /**
+   * Создает props для перетаскивания
+   */
   const createDragHandleProps = (item: T, index: number) => ({
     draggable: isEditing,
     onDragStart: () => handleDragStart(item, index),
@@ -59,8 +70,8 @@ function DraggableList<T extends { id: string }>({
     onDragLeave: handleDragLeave,
     onDrop: (e: React.DragEvent) => handleDrop(e, index),
     style: {
-      cursor: isEditing ? 'grab' : 'default',
-    }
+      cursor: isEditing ? "grab" : "default",
+    },
   });
 
   return (
@@ -68,10 +79,9 @@ function DraggableList<T extends { id: string }>({
       {items.map((item, index) => (
         <Box
           key={item.id}
-          onDragOver={(e) => {
-            if (isEditing) {
-              e.preventDefault(); // Разрешаем drop
-            }
+          sx={{
+            transform: draggedOverIndex === index ? "translateY(5px)" : "none",
+            transition: "transform 0.2s ease",
           }}
         >
           {renderItem(item, index, createDragHandleProps(item, index))}

@@ -17,25 +17,27 @@ export class DragDropService<T extends { id: string }> {
    * Завершает перетаскивание и возвращает новые данные
    */
   endDrag(
-    items: T[], 
+    items: T[],
     dropIndex: number
   ): { newItems: T[]; oldIndex: number; newIndex: number } | null {
     if (!this.draggedItem || this.dragStartIndex === -1) {
       return null;
     }
 
+    // Если бросаем на ту же позицию - ничего не меняем
+    if (this.dragStartIndex === dropIndex) {
+      this.resetDrag();
+      return null;
+    }
+
     const newItems = [...items];
-    
-    // Удаляем элемент из старой позиции
-    newItems.splice(this.dragStartIndex, 1);
-    
-    // Вставляем элемент в новую позицию
-    newItems.splice(dropIndex, 0, this.draggedItem);
+    const [removed] = newItems.splice(this.dragStartIndex, 1);
+    newItems.splice(dropIndex, 0, removed);
 
     const result = {
       newItems,
       oldIndex: this.dragStartIndex,
-      newIndex: dropIndex
+      newIndex: dropIndex,
     };
 
     this.resetDrag();

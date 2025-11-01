@@ -1,16 +1,16 @@
-import React from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import ChecklistPage from './pages/ChecklistPage';
+import React from "react";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import ChecklistPage from "./pages/ChecklistPage";
 
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: "light",
     primary: {
-      main: '#1976d2',
+      main: "#1976d2",
     },
     background: {
-      default: '#f5f5f5',
+      default: "#f5f5f5",
     },
   },
 });
