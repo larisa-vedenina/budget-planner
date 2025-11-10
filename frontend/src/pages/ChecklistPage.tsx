@@ -1,5 +1,4 @@
-// frontend/src/pages/ChecklistPage.tsx
-import React, { useState, useEffect } from "react"; // 👈 ДОБАВИЛИ useEffect
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Grid,
@@ -97,7 +96,6 @@ const ChecklistPage: React.FC = () => {
     NoteModel.createAINote("Откладывайте 10% от каждого дохода"),
   ]);
 
-  // 👇 ПЕРЕМЕСТИЛИ useEffect ПОСЛЕ ВСЕХ СОСТОЯНИЙ
   useEffect(() => {
     loadFromLocalStorage();
   }, []);
@@ -107,7 +105,7 @@ const ChecklistPage: React.FC = () => {
   }, [mandatoryExpenses, optionalExpenses, notes, budget, startDate, endDate]);
 
   /**
-   * Умное форматирование периода из дат в читаемый вид
+   * Форматирование периода из дат в читаемый вид
    */
   const formatPeriod = (start: string, end: string): string => {
     if (!start || !end) return "Период не указан";
@@ -116,7 +114,7 @@ const ChecklistPage: React.FC = () => {
       const startDate = new Date(start);
       const endDate = new Date(end);
 
-      // Проверяем, что даты валидны
+      // Проверяем, что дата валидна
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         return `${start} - ${end}`;
       }
@@ -406,7 +404,7 @@ const ChecklistPage: React.FC = () => {
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box>
             {isEditing ? (
-              // 👇 РЕЖИМ РЕДАКТИРОВАНИЯ - ПОЛЯ ВВОДА
+              // режим редактирования
               <Box
                 display="flex"
                 gap={2}

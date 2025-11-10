@@ -38,7 +38,6 @@ const NoteItem: React.FC<NoteItemProps> = ({
    * Обрабатывает удаление заметки
    */
   const handleDelete = () => {
-    console.log('Deleting note with id:', note.id); // 👈 ДЛЯ ОТЛАДКИ
     onDelete(note.id);
   };
 

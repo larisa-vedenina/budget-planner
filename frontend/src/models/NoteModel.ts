@@ -1,5 +1,5 @@
 /**
- * Модель заметки
+ * заметки
  */
 export class NoteModel {
   constructor(
@@ -14,7 +14,7 @@ export class NoteModel {
    */
   static createUserNote(): NoteModel {
     return new NoteModel(
-      `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // 👈 УНИКАЛЬНЫЙ ID
+      `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, 
       "Новая заметка...",
       "user"
     );
@@ -25,7 +25,7 @@ export class NoteModel {
    */
   static createAINote(content: string): NoteModel {
     return new NoteModel(
-      `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // 👈 УНИКАЛЬНЫЙ ID
+      `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       content,
       "ai"
     );

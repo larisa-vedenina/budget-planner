@@ -1,5 +1,5 @@
 /**
- * Модель пункта чек-листа
+ * Пункт чек-листа
  */
 export class ChecklistItemModel {
   constructor(
