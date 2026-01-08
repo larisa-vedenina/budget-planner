@@ -1,14 +1,14 @@
-import React from 'react';
+import React from "react";
 import {
   Box,
   TextField,
   IconButton,
   Chip,
   Card,
-  CardContent
-} from '@mui/material';
-import { Delete, DragHandle } from '@mui/icons-material';
-import { NoteModel } from '../../models/NoteModel';
+  CardContent,
+} from "@mui/material";
+import { Delete, DragHandle } from "@mui/icons-material";
+import { NoteModel } from "../../models/NoteModel";
 
 interface NoteItemProps {
   note: NoteModel;
@@ -25,7 +25,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
   onUpdate,
   onDelete,
   isDragging = false,
-  dragHandleProps
+  dragHandleProps,
 }) => {
   /**
    * Обрабатывает изменение содержимого заметки
@@ -42,28 +42,30 @@ const NoteItem: React.FC<NoteItemProps> = ({
   };
 
   return (
-    <Card 
+    <Card
       {...dragHandleProps}
-      sx={{ 
+      sx={{
         mb: 2,
         opacity: isDragging ? 0.5 : 1,
-        transition: 'all 0.2s ease',
-        cursor: isEditing ? 'grab' : 'default',
-        backgroundColor: note.isAIAdvice() ? 'background.default' : 'primary.light',
-        color: note.isAIAdvice() ? 'text.primary' : 'white',
-        '&:active': {
-          cursor: isEditing ? 'grabbing' : 'default',
+        transition: "all 0.2s ease",
+        cursor: isEditing ? "grab" : "default",
+        backgroundColor: note.isAIAdvice()
+          ? "background.default"
+          : "primary.light",
+        color: note.isAIAdvice() ? "text.primary" : "white",
+        "&:active": {
+          cursor: isEditing ? "grabbing" : "default",
         },
-        '&:hover': {
+        "&:hover": {
           boxShadow: isEditing ? 2 : 1,
-        }
+        },
       }}
     >
-      <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+      <CardContent sx={{ "&:last-child": { pb: 2 } }}>
         <Box display="flex" gap={1}>
           {/* Handle для перетаскивания */}
           {isEditing && (
-            <Box sx={{ cursor: 'grab', mt: 0.5 }}>
+            <Box sx={{ cursor: "grab", mt: 0.5 }}>
               <DragHandle />
             </Box>
           )}
@@ -73,37 +75,47 @@ const NoteItem: React.FC<NoteItemProps> = ({
             <TextField
               fullWidth
               multiline
-              variant="standard"
+              // minRows={1} // 👈 Минимальная высота
+              // maxRows={3} // 👈 Максимальная высота
               value={note.content}
               onChange={handleContentChange}
               InputProps={{
                 readOnly: !isEditing,
-                disableUnderline: !isEditing
+                disableUnderline: !isEditing,
               }}
-              sx={{ 
-                '& .MuiInputBase-input': { 
-                  fontSize: '0.9rem',
-                  color: note.isAIAdvice() ? 'text.primary' : 'white'
-                }
+              sx={{
+                "& .MuiInputBase-input": {
+                  fontFamily: "'Roboto Condensed', sans-serif",
+                  fontSize: "1.25rem",
+                  fontWeight: 400,
+                  lineHeight: 1.5,
+                  letterSpacing: "0.01em",
+                  color: note.isAIAdvice() ? "text.primary" : "white",
+                },
               }}
             />
 
             {/* Информация о типе заметки и кнопка удаления */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
-              <Chip 
-                label={note.isAIAdvice() ? 'AI совет' : 'Моя заметка'} 
-                size="small" 
-                color={note.isAIAdvice() ? 'default' : 'primary'}
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mt={1}
+            >
+              <Chip
+                label={note.isAIAdvice() ? "AI совет" : "Моя заметка"}
+                size="small"
+                color={note.isAIAdvice() ? "default" : "primary"}
               />
-              
+
               {/* Кнопка удаления */}
               {isEditing && (
-                <IconButton 
-                  onClick={handleDelete} 
-                  size="small" 
+                <IconButton
+                  onClick={handleDelete}
+                  size="small"
                   color="error"
-                  sx={{ 
-                    color: note.isAIAdvice() ? 'error.main' : 'white'
+                  sx={{
+                    color: note.isAIAdvice() ? "error.main" : "white",
                   }}
                 >
                   <Delete />

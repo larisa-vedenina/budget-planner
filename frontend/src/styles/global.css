@@ -1,0 +1,390 @@
+/* ============================================ ЛОКАЛЬНЫЕ ШРИФТЫ ============================================ */
+
+@font-face {
+  font-family: "Roboto Condensed";
+  src: url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff2")
+      format("woff2-variations"),
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff")
+      format("woff-variations");
+  font-weight: 100 900;
+  font-stretch: 75% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Roboto Condensed";
+  src: url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff2")
+      format("woff2-variations"),
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff")
+      format("woff-variations");
+  font-weight: 100 900;
+  font-stretch: 75% 125%;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ============================================ СБРОС СТИЛЕЙ ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  height: 100%;
+}
+
+body {
+  font-family: "Roboto Condensed", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #fdf7f7;
+  color: #0d0d0d;
+  min-height: 100vh;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* ============================================ ТИПОГРАФИЧЕСКИЕ КЛАССЫ ============================================ */
+
+/* Вес шрифта */
+.font-thin {
+  font-weight: 100;
+}
+.font-extralight {
+  font-weight: 200;
+}
+.font-light {
+  font-weight: 300;
+}
+.font-normal {
+  font-weight: 400;
+}
+.font-medium {
+  font-weight: 500;
+}
+.font-semibold {
+  font-weight: 600;
+}
+.font-bold {
+  font-weight: 700;
+}
+.font-extrabold {
+  font-weight: 800;
+}
+.font-black {
+  font-weight: 900;
+}
+
+/* Размеры шрифта */
+.text-xs {
+  font-size: 0.75rem;
+} /* 12px */
+.text-sm {
+  font-size: 0.875rem;
+} /* 14px */
+.text-base {
+  font-size: 1rem;
+} /* 16px */
+.text-lg {
+  font-size: 1.125rem;
+} /* 18px */
+.text-xl {
+  font-size: 1.25rem;
+} /* 20px */
+.text-2xl {
+  font-size: 1.5rem;
+} /* 24px */
+.text-3xl {
+  font-size: 1.875rem;
+} /* 30px */
+.text-4xl {
+  font-size: 2.25rem;
+} /* 36px */
+
+/* Выравнивание */
+.text-left {
+  text-align: left;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+
+/* Стили текста */
+.italic {
+  font-style: italic;
+}
+.uppercase {
+  text-transform: uppercase;
+}
+.lowercase {
+  text-transform: lowercase;
+}
+.capitalize {
+  text-transform: capitalize;
+}
+
+/* ============================================ УТИЛИТЫ ============================================ */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Отступы */
+.m-0 {
+  margin: 0;
+}
+.mt-1 {
+  margin-top: 0.25rem;
+}
+.mt-2 {
+  margin-top: 0.5rem;
+}
+.mt-3 {
+  margin-top: 1rem;
+}
+.mt-4 {
+  margin-top: 1.5rem;
+}
+.mt-5 {
+  margin-top: 2rem;
+}
+
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+.mb-3 {
+  margin-bottom: 1rem;
+}
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+.mb-5 {
+  margin-bottom: 2rem;
+}
+
+.p-0 {
+  padding: 0;
+}
+.pt-1 {
+  padding-top: 0.25rem;
+}
+.pt-2 {
+  padding-top: 0.5rem;
+}
+.pt-3 {
+  padding-top: 1rem;
+}
+.pt-4 {
+  padding-top: 1.5rem;
+}
+.pt-5 {
+  padding-top: 2rem;
+}
+
+/* Фоны */
+.bg-white {
+  background-color: #ffffff;
+}
+.bg-light {
+  background-color: #fdf7f7;
+}
+.bg-blue {
+  background-color: #69b5d3;
+}
+.bg-green {
+  background-color: #507b5d;
+}
+.bg-red {
+  background-color: #d87b7b;
+}
+.bg-yellow {
+  background-color: #fcd688;
+}
+
+/* Текст */
+.text-dark {
+  color: #0d0d0d;
+}
+.text-medium {
+  color: #5b5b5b;
+}
+.text-light {
+  color: #ffffff;
+}
+.text-light-accent {
+  color: #ffdfdf;
+}
+
+/* Flex утилиты */
+.flex {
+  display: flex;
+}
+.flex-col {
+  flex-direction: column;
+}
+.items-center {
+  align-items: center;
+}
+.justify-center {
+  justify-content: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.gap-1 {
+  gap: 0.25rem;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.gap-3 {
+  gap: 1rem;
+}
+.gap-4 {
+  gap: 1.5rem;
+}
+.gap-5 {
+  gap: 2rem;
+}
+
+/* Кастомные скроллбары */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c1c1c1;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Ховер-эффекты */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(217, 217, 217, 0.35);
+}
+
+/* ============================================ ДОСТУПНОСТЬ ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Улучшение читаемости для выделения */
+::selection {
+  background-color: rgba(105, 181, 211, 0.3);
+  color: #0d0d0d;
+}
+
+/* ============================================
+   ДОПОЛНИТЕЛЬНЫЕ ТИПОГРАФИЧЕСКИЕ СТИЛИ
+   ============================================ */
+
+/* Стили для инпутов */
+.input-text {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+/* Стили для placeholders */
+::placeholder {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 300;
+  color: #5B5B5B;
+  opacity: 0.7;
+}
+
+/* Стили для вычеркнутого текста */
+.text-strike {
+  text-decoration: line-through;
+  color: #5B5B5B !important;
+  opacity: 0.7;
+}
+
+/* Стили для суммы (жирный) */
+.text-amount {
+  font-weight: 600 !important;
+  font-feature-settings: 'tnum'; /* Табличные цифры */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Стили для категорий */
+.text-category {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+/* Стили для AI советов */
+.text-ai-advice {
+  font-style: italic;
+  color: #507B5D; /* зеленый для AI */
+}
+
+/* Стили для пользовательских заметок */
+.text-user-note {
+  font-weight: 500;
+}

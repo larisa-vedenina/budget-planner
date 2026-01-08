@@ -31,8 +31,6 @@ TypeScript - Статическая типизация
 ## Установка
 
 ### Клонирование репозитория
-git clone https://github.com/your-username/budget-planner.git
-cd budget-planner
 
 ### Установка зависимостей
 cd frontend

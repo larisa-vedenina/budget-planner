@@ -1,25 +1,18 @@
-import React from "react";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
-import ChecklistPage from "./pages/ChecklistPage";
-
-const theme = createTheme({
-  palette: {
-    mode: "light",
-    primary: {
-      main: "#1976d2",
-    },
-    background: {
-      default: "#f5f5f5",
-    },
-  },
-});
+import React from 'react';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { BrowserRouter as Router } from 'react-router-dom'; // 👈 импортируем BrowserRouter
+import { theme } from './styles/theme';
+import './styles/global.css';
+import AppRoutes from './routes/AppRoutes'; // 👈 переименовываем
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <ChecklistPage />
+      <Router> {/* 👈 добавляем BrowserRouter */}
+        <AppRoutes />
+      </Router>
     </ThemeProvider>
   );
 }

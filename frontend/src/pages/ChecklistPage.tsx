@@ -399,129 +399,118 @@ const ChecklistPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 3, height: "100vh" }}>
-      {/* Шапка */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box>
-            {isEditing ? (
-              // режим редактирования
-              <Box
-                display="flex"
-                gap={2}
-                alignItems="flex-start"
-                flexWrap="wrap"
-              >
-                {/* Бюджет с иконкой */}
-                <Box display="flex" alignItems="center" gap={1}>
-                  <AccountBalanceWallet fontSize="small" color="action" />
-                  <Typography variant="h6" component="span">
-                    Бюджет:
-                  </Typography>
-                  <TextField
-                    type="number"
-                    value={budget}
-                    onChange={(e) => {
-                      const newBudget = Math.max(0, Number(e.target.value));
-                      setBudget(newBudget);
-                    }}
-                    variant="standard"
-                    size="small"
-                    sx={{ width: 120 }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">₽</InputAdornment>
-                      ),
-                    }}
-                    error={budget <= 0}
-                    helperText={
-                      budget <= 0 ? "Бюджет должен быть положительным" : ""
-                    }
-                  />
-                </Box>
-
-                {/* Период с двумя датами */}
-                <Box display="flex" alignItems="flex-start" gap={1}>
-                  <CalendarToday
-                    fontSize="small"
-                    color="action"
-                    sx={{ mt: 1 }}
-                  />
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Typography variant="h6" component="span">
-                        Период:
-                      </Typography>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <TextField
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          variant="standard"
-                          size="small"
-                          sx={{ width: 140 }}
-                          InputLabelProps={{
-                            shrink: true,
-                          }}
-                          error={!isDateRangeValid(startDate, endDate)}
-                        />
-                        <Typography
-                          variant="body2"
-                          color={
-                            !isDateRangeValid(startDate, endDate)
-                              ? "error"
-                              : "text.secondary"
-                          }
-                        >
-                          до
-                        </Typography>
-                        <TextField
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          variant="standard"
-                          size="small"
-                          sx={{ width: 140 }}
-                          InputLabelProps={{
-                            shrink: true,
-                          }}
-                          error={!isDateRangeValid(startDate, endDate)}
-                        />
-                      </Box>
-                    </Box>
-                    {/* Сообщение об ошибке периода */}
-                    {!isDateRangeValid(startDate, endDate) && (
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{ display: "block", mt: 0.5, ml: 1 }}
-                      >
-                        {getDateRangeError(startDate, endDate)}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-            ) : (
+      <Box
+        sx={{
+          p: 2,
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
+        {/* Левая часть - Бюджет */}
+        <Box sx={{ flex: 1 }}>
+          {isEditing ? (
+            // режим редактирования
+            <Box display="flex" alignItems="flex-start" gap={2}>
               <Box display="flex" alignItems="center" gap={1}>
-                <AccountBalanceWallet fontSize="small" color="action" />
-                <Typography variant="h6" component="span">
-                  Бюджет: {budget.toLocaleString()} ₽
+                <Typography variant="h1" component="span">
+                  Бюджет:
                 </Typography>
-                <Typography variant="h6" component="span" sx={{ mx: 1 }}>
-                  •
-                </Typography>
-                <CalendarToday fontSize="small" color="action" />
-                <Typography variant="h6" component="span">
-                  Период: {formatPeriod(startDate, endDate)}
-                </Typography>
+                <TextField
+                  type="number"
+                  value={budget}
+                  onChange={(e) => {
+                    const newBudget = Math.max(0, Number(e.target.value));
+                    setBudget(newBudget);
+                  }}
+                  variant="standard"
+                  size="small"
+                  sx={{ width: 120 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">₽</InputAdornment>
+                    ),
+                  }}
+                  error={budget <= 0}
+                  helperText={
+                    budget <= 0 ? "Бюджет должен быть положительным" : ""
+                  }
+                />
               </Box>
-            )}
-
-            <Typography variant="h5" color="primary">
-              Осталось: {remainingBudget.toLocaleString()} ₽
+            </Box>
+          ) : (
+            <Typography variant="h1" component="span">
+              Бюджет: {budget.toLocaleString()} ₽
             </Typography>
-          </Box>
+          )}
 
+          <Typography variant="h2" color="text">
+            Осталось: {remainingBudget.toLocaleString()} ₽
+          </Typography>
+        </Box>
+
+        {/* Центральная часть - Период */}
+        <Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
+          {isEditing ? (
+            // режим редактирования периода
+            <Box display="flex" flexDirection="column" alignItems="center">
+              <Box display="flex" alignItems="center" gap={2}>
+                <TextField
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  variant="standard"
+                  size="small"
+                  sx={{ width: 140 }}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  error={!isDateRangeValid(startDate, endDate)}
+                />
+                <Typography
+                  variant="body2"
+                  color={
+                    !isDateRangeValid(startDate, endDate)
+                      ? "error"
+                      : "text.secondary"
+                  }
+                >
+                  до
+                </Typography>
+                <TextField
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  variant="standard"
+                  size="small"
+                  sx={{ width: 140 }}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  error={!isDateRangeValid(startDate, endDate)}
+                />
+              </Box>
+              {/* Сообщение об ошибке периода */}
+              {!isDateRangeValid(startDate, endDate) && (
+                <Typography
+                  variant="caption"
+                  color="error"
+                  sx={{ display: "block", mt: 0.5 }}
+                >
+                  {getDateRangeError(startDate, endDate)}
+                </Typography>
+              )}
+            </Box>
+          ) : (
+            <Typography variant="h2" component="span">
+              {formatPeriod(startDate, endDate)}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Правая часть - Иконка замка */}
+        <Box sx={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
           <IconButton
             onClick={() => setIsEditing(!isEditing)}
             color={isEditing ? "primary" : "default"}
@@ -529,13 +518,20 @@ const ChecklistPage: React.FC = () => {
             {isEditing ? <LockOpen /> : <Lock />}
           </IconButton>
         </Box>
-      </Paper>
+      </Box>
 
       {/* Основной контент */}
-      <Grid container spacing={3} sx={{ height: "70vh" }}>
+      <Grid
+        container
+        spacing={3}
+        sx={{ minHeight: "70vh", height: "auto", alignItems: "stretch" }}
+      >
         {/* Левая колонка - Чек-лист */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ p: 2, height: "100%", overflow: "auto" }}>
+        <Grid
+          size={{ xs: 12, md: 8 }}
+          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+        >
+          <Paper sx={{ p: 2, flex: 1, minHeight: "50%", overflow: "auto" }}>
             {/* Обязательные расходы */}
             <Box mb={4}>
               <Box
@@ -544,8 +540,8 @@ const ChecklistPage: React.FC = () => {
                 alignItems="center"
                 mb={2}
               >
-                <Typography variant="h6">ОБЯЗАТЕЛЬНЫЕ</Typography>
-                <Typography variant="h6" color="primary">
+                <Typography variant="h2">ОБЯЗАТЕЛЬНЫЕ</Typography>
+                <Typography variant="h2" color="primary">
                   Осталось: {mandatoryRemaining.toLocaleString()} ₽
                 </Typography>
               </Box>
@@ -580,7 +576,8 @@ const ChecklistPage: React.FC = () => {
                 </Button>
               )}
             </Box>
-
+          </Paper>
+          <Paper sx={{ p: 2, flex: 1, minheight: "50%", overflow: "auto" }}>
             {/* Желаемые расходы */}
             <Box>
               <Box
@@ -589,8 +586,8 @@ const ChecklistPage: React.FC = () => {
                 alignItems="center"
                 mb={2}
               >
-                <Typography variant="h6">ЖЕЛАЕМЫЕ</Typography>
-                <Typography variant="h6" color="primary">
+                <Typography variant="h2">ЖЕЛАЕМЫЕ</Typography>
+                <Typography variant="h2" color="primary">
                   Осталось: {optionalRemaining.toLocaleString()} ₽
                 </Typography>
               </Box>
@@ -631,7 +628,7 @@ const ChecklistPage: React.FC = () => {
         {/* Правая колонка - Заметки */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2, height: "100%", overflow: "auto" }}>
-            <Typography variant="h6" gutterBottom color="primary">
+            <Typography variant="h2" gutterBottom color="primary">
               ЗАМЕТКИ И СОВЕТЫ
             </Typography>
 

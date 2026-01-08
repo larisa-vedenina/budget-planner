@@ -91,7 +91,7 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                   value={item.title}
                   onChange={handleTitleChange}
                   variant="standard"
-                  placeholder="Название пункта"
+                  placeholder="На что тратим?"
                   fullWidth
                 />
                 <TextField
@@ -99,7 +99,7 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                   value={item.amount}
                   onChange={handleAmountChange}
                   variant="standard"
-                  placeholder="Сумма"
+                  placeholder="Сколько?"
                   sx={{ width: 100 }}
                 />
                 <Typography>₽</Typography>
@@ -111,7 +111,7 @@ const ChecklistItem: React.FC<ChecklistItemProps> = ({
                 alignItems="center"
               >
                 <Typography>{item.title}</Typography>
-                <Typography sx={{ fontWeight: "bold" }}>
+                <Typography sx={{ fontWeight: "normal" }}>
                   {item.amount.toLocaleString()} ₽
                 </Typography>
               </Box>
