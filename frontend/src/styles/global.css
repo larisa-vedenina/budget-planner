@@ -2,7 +2,8 @@
 
 @font-face {
   font-family: "Roboto Condensed";
-  src: url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff2")
+  src:
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff2")
       format("woff2-variations"),
     url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff")
       format("woff-variations");
@@ -14,7 +15,8 @@
 
 @font-face {
   font-family: "Roboto Condensed";
-  src: url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff2")
+  src:
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff2")
       format("woff2-variations"),
     url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff")
       format("woff-variations");
@@ -30,6 +32,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: "Roboto Condensed", sans-serif;
 }
 
 html {
@@ -38,7 +41,11 @@ html {
 }
 
 body {
-  font-family: "Roboto Condensed", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    "Roboto Condensed",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fdf7f7;
@@ -46,6 +53,23 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   font-weight: 400;
+}
+
+button,
+input,
+textarea {
+  font-family: "Roboto Condensed", sans-serif;
+}
+
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
 }
 
 /* ============================================ ТИПОГРАФИЧЕСКИЕ КЛАССЫ ============================================ */
@@ -310,7 +334,9 @@ body {
 
 /* Ховер-эффекты */
 .hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
@@ -342,7 +368,7 @@ body {
 
 /* Стили для инпутов */
 .input-text {
-  font-family: 'Roboto Condensed', sans-serif;
+  font-family: "Roboto Condensed", sans-serif;
   font-size: 1.25rem;
   font-weight: 400;
   line-height: 1.5;
@@ -351,23 +377,23 @@ body {
 
 /* Стили для placeholders */
 ::placeholder {
-  font-family: 'Roboto Condensed', sans-serif;
+  font-family: "Roboto Condensed", sans-serif;
   font-weight: 300;
-  color: #5B5B5B;
+  color: #5b5b5b;
   opacity: 0.7;
 }
 
 /* Стили для вычеркнутого текста */
 .text-strike {
   text-decoration: line-through;
-  color: #5B5B5B !important;
+  color: #5b5b5b !important;
   opacity: 0.7;
 }
 
 /* Стили для суммы (жирный) */
 .text-amount {
   font-weight: 600 !important;
-  font-feature-settings: 'tnum'; /* Табличные цифры */
+  font-feature-settings: "tnum"; /* Табличные цифры */
   font-variant-numeric: tabular-nums;
 }
 
@@ -381,10 +407,35 @@ body {
 /* Стили для AI советов */
 .text-ai-advice {
   font-style: italic;
-  color: #507B5D; /* зеленый для AI */
+  color: #507b5d; /* зеленый для AI */
 }
 
 /* Стили для пользовательских заметок */
 .text-user-note {
   font-weight: 500;
+}
+
+.sortable-checklist-item:hover .checklist-item,
+.sortable-note-item:hover .note-item {
+  box-shadow: -1px 1px 0.5px rgba(0, 0, 0, 0.25) !important;
+  transform: translate(-1px, 1px) !important;
+  transition: all 0.2s ease !important;
+}
+
+.checklist-item:hover .checkbox-hover-effect {
+  box-shadow: -2px 2px 1px rgba(0, 0, 0, 0.25) !important;
+  transform: translate(-1px, 1px) !important;
+}
+
+/* Убираем полоски при наведении */
+* {
+  box-sizing: border-box;
+}
+
+/* Исправление обрезки текста */
+.checklist-item > div {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

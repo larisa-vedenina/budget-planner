@@ -1,19 +1,25 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import ChecklistPage from '../pages/ChecklistPage';
-import FontTest from '../components/FontTest';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { StartPage } from "../pages/StartPage/StartPage";
+import { FormPage } from "../pages/FormPage/FormPage";
+import { LoginPage } from "../pages/LoginPage/LoginPage";
+import { ArchivePage } from "../pages/ArchivePage/ArchivePage";
+import { MainPage } from "../pages/MainPage/MainPage";
 
-
-const AppRoutes: React.FC = () => {
+export const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<ChecklistPage />} />
-      <Route path="/form" element={<div>Форма (скоро)</div>} />
-      <Route path="/start" element={<div>Стартовая страница (скоро)</div>} />
-      <Route path="/archive" element={<div>Архив (скоро)</div>} />
-      <Route path="/font-test" element={<FontTest />} />
+      {/* Автоматический редирект на стартовую */}
+      <Route path="/" element={<Navigate to="/start" replace />} />
+
+      {/* Основные страницы */}
+      <Route path="/start" element={<StartPage />} />
+      <Route path="/form" element={<FormPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/archive" element={<ArchivePage />} />
+      <Route path="/main" element={<MainPage />} />
+
+      {/* Fallback для несуществующих страниц */}
+      <Route path="*" element={<Navigate to="/start" replace />} />
     </Routes>
   );
 };
-
-export default AppRoutes;

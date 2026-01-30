@@ -1,19 +1,21 @@
-import React from 'react';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { BrowserRouter as Router } from 'react-router-dom'; // 👈 импортируем BrowserRouter
-import { theme } from './styles/theme';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { BudgetProvider } from './contexts/BudgetContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AppRoutes } from './routes/AppRoutes';
 import './styles/global.css';
-import AppRoutes from './routes/AppRoutes'; // 👈 переименовываем
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router> {/* 👈 добавляем BrowserRouter */}
-        <AppRoutes />
-      </Router>
-    </ThemeProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <ThemeProvider>
+          <BudgetProvider>
+            <AppRoutes />
+          </BudgetProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
