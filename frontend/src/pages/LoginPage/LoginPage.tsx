@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import {
   clearPendingOtpRequest,
   formatPhoneInput,
-  isValidLogin,
+  isValidName,
   isValidOtpCode,
   isValidPhone,
   loadPendingOtpRequest,
@@ -25,7 +25,7 @@ const buildBaseFieldErrors = (
 ): Omit<LoginFormErrors, "code" | "general"> => {
   const nextErrors: Omit<LoginFormErrors, "code" | "general"> = {};
 
-  if (!isValidLogin(name)) {
+  if (!isValidName(name)) {
     nextErrors.name = "Укажите имя длиной не меньше 2 символов.";
   }
 
@@ -40,7 +40,7 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const { requestOtp, verifyOtp, isAuthenticated, isAuthLoading } = useAuth();
   const pendingOtpRequest = useMemo(() => loadPendingOtpRequest(), []);
-  const [name, setName] = useState(pendingOtpRequest?.login ?? "");
+  const [name, setName] = useState(pendingOtpRequest?.name ?? "");
   const [phone, setPhone] = useState(
     pendingOtpRequest
       ? formatPhoneInput(pendingOtpRequest.normalizedPhone)

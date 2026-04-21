@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import styles from "./ProfileMenu.module.scss";
 
-const getAvatarFallback = (login: string): string =>
-  login.trim().charAt(0).toUpperCase() || "U";
+const getAvatarFallback = (name: string): string =>
+  name.trim().charAt(0).toUpperCase() || "U";
 
 export const ProfileMenu: React.FC = () => {
   const navigate = useNavigate();
@@ -14,8 +14,8 @@ export const ProfileMenu: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const avatarFallback = useMemo(
-    () => getAvatarFallback(user?.name ?? user?.login ?? ""),
-    [user?.login, user?.name],
+    () => getAvatarFallback(user?.name ?? ""),
+    [user?.name],
   );
 
   useEffect(() => {
@@ -100,7 +100,7 @@ export const ProfileMenu: React.FC = () => {
         {user.avatarUrl ? (
           <img
             src={user.avatarUrl}
-            alt={`Аватар ${user.name || user.login}`}
+            alt={`Аватар ${user.name}`}
             className={styles.avatarImage}
           />
         ) : (
@@ -111,7 +111,7 @@ export const ProfileMenu: React.FC = () => {
       {isOpen && (
         <div className={styles.menu}>
           <div className={styles.profileInfo}>
-            <div className={styles.profileLogin}>{user.name || user.login}</div>
+            <div className={styles.profileLogin}>{user.name}</div>
             <div className={styles.profilePhone}>{user.phone}</div>
           </div>
 

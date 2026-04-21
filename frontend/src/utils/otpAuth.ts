@@ -2,14 +2,14 @@ const OTP_REQUEST_STORAGE_KEY = "BUDGET_PLANNER_PENDING_OTP";
 const DEFAULT_OTP_TTL_MS = 10 * 60 * 1000;
 
 export interface PendingOtpRequest {
-  login: string;
+  name: string;
   normalizedPhone: string;
   requestedAt: Date;
   expiresAt: Date;
 }
 
 interface StoredPendingOtpRequest {
-  login: string;
+  name: string;
   normalizedPhone: string;
   requestedAt: string;
   expiresAt: string;
@@ -42,7 +42,7 @@ const toPendingOtpRequest = (
   try {
     const parsedValue = JSON.parse(rawValue) as StoredPendingOtpRequest;
     const pendingRequest: PendingOtpRequest = {
-      login: parsedValue.login,
+      name: parsedValue.name,
       normalizedPhone: parsedValue.normalizedPhone,
       requestedAt: new Date(parsedValue.requestedAt),
       expiresAt: new Date(parsedValue.expiresAt),
@@ -116,7 +116,7 @@ export const formatPhoneDisplay = (value: string): string => {
   )}-${nationalDigits.slice(6, 8)}-${nationalDigits.slice(8, 10)}`;
 };
 
-export const isValidLogin = (value: string): boolean => value.trim().length >= 2;
+export const isValidName = (value: string): boolean => value.trim().length >= 2;
 
 export const isValidPhone = (value: string): boolean => {
   const normalizedPhone = normalizePhone(value);
@@ -136,7 +136,7 @@ export const loadPendingOtpRequest = (): PendingOtpRequest | null => {
 };
 
 export const savePendingOtpRequest = (
-  login: string,
+  name: string,
   phone: string,
   expiresAt?: Date,
 ): PendingOtpRequest => {
@@ -146,7 +146,7 @@ export const savePendingOtpRequest = (
     expiresAt ?? new Date(requestedAt.getTime() + DEFAULT_OTP_TTL_MS);
 
   const pendingRequest: PendingOtpRequest = {
-    login: login.trim(),
+    name: name.trim(),
     normalizedPhone,
     requestedAt,
     expiresAt: safeExpiresAt,
@@ -154,7 +154,7 @@ export const savePendingOtpRequest = (
 
   if (typeof window !== "undefined") {
     const payload: StoredPendingOtpRequest = {
-      login: pendingRequest.login,
+      name: pendingRequest.name,
       normalizedPhone: pendingRequest.normalizedPhone,
       requestedAt: pendingRequest.requestedAt.toISOString(),
       expiresAt: pendingRequest.expiresAt.toISOString(),

@@ -5,7 +5,7 @@ import { apiClient } from "./apiClient";
 
 interface RawUser {
   id: string;
-  login: string;
+  login?: string;
   phone: string;
   email?: string;
   avatarUrl?: string;
@@ -16,16 +16,15 @@ interface RawUser {
 
 const normalizeUser = (user: RawUser): User => ({
   id: user.id,
-  login: user.login,
+  name: user.name || user.login || "",
   phone: user.phone,
   email: user.email,
   avatarUrl: user.avatarUrl,
-  name: user.name,
   createdAt: new Date(user.createdAt),
   lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
 });
 
-export const requestLoginCode = async (
+export const requestOtpCode = async (
   name: string,
   phone: string,
 ): Promise<{ phone: string; expiresAt: Date }> => {
@@ -55,7 +54,7 @@ export const requestLoginCode = async (
   }
 };
 
-export const verifyLoginCode = async (
+export const verifyOtpCode = async (
   name: string,
   phone: string,
   code: string,

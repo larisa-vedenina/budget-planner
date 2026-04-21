@@ -11,15 +11,15 @@ import { clearPendingOtpRequest } from "../utils/otpAuth";
 import {
   fetchCurrentUser,
   logoutCurrentUser,
-  requestLoginCode,
+  requestOtpCode,
   updateUserAvatar,
-  verifyLoginCode,
+  verifyOtpCode,
 } from "../services/authService";
 
 interface AuthContextType {
   user: User | null;
-  requestOtp: (login: string, phone: string) => Promise<{ phone: string; expiresAt: Date }>;
-  verifyOtp: (login: string, phone: string, code: string) => Promise<void>;
+  requestOtp: (name: string, phone: string) => Promise<{ phone: string; expiresAt: Date }>;
+  verifyOtp: (name: string, phone: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   updateAvatar: (avatarUrl: string) => Promise<void>;
   isAuthenticated: boolean;
@@ -112,15 +112,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
   }, [user]);
 
-  const requestOtp = async (loginValue: string, phone: string) =>
-    requestLoginCode(loginValue, phone);
+  const requestOtp = async (name: string, phone: string) =>
+    requestOtpCode(name, phone);
 
   const verifyOtp = async (
-    loginValue: string,
+    name: string,
     phone: string,
     code: string,
   ) => {
-    const nextUser = await verifyLoginCode(loginValue, phone, code);
+    const nextUser = await verifyOtpCode(name, phone, code);
     clearPendingOtpRequest();
     setUser(nextUser);
   };
