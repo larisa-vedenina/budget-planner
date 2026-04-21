@@ -36,29 +36,19 @@ export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
   });
 
   const style = {
+    width: "100%",
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
     cursor: isEditing ? "grab" : "default",
-    marginBottom: "10px",
   };
 
   return (
-    <Box // Используем Box вместо div
+    <Box
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      sx={{
-        "&:hover": {
-          "& .note-item": {
-            boxShadow:
-              isEditing && !isDragging
-                ? "-1px 1px 0.5px rgba(0, 0, 0, 0.25)"
-                : "none",
-          },
-        },
-      }}
     >
       <NoteItem
         note={note}

@@ -1,0 +1,13 @@
+{
+  "name": "budget-planner-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend for budget planner",
+  "dependencies": {
+    "pg": "^8.16.3",
+    "twilio": "^5.10.4"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

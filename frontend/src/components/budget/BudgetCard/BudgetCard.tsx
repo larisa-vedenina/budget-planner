@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { ChecklistItemModel } from "../../../types/checklist-item";
 import { NoteModel } from "../../../types/note";
-import {
-  CellColor,
-  getContrastTextColor,
-  calculateActiveExpenses,
-} from "../../../types/budget";
+import { CellColor, getContrastTextColor } from "../../../types/budget";
+import { getSurfaceShadowVariable } from "../../../styles/theme";
 import ColorPickerButton from "./ColorPickerButton";
 import ChecklistItem from "../ChecklistItem/ChecklistItem";
-import NoteItem from "../NoteItem/NoteItem";
 import { SortableChecklistItem } from "../SortableChecklistItem";
 import { SortableNoteItem } from "../SortableNoteItem";
 import {
@@ -26,6 +22,21 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import styles from "./BudgetCard.module.scss";
+
+const COMPLETED_ITEM_HIDE_DELAY_MS = 2000;
+
+const moveInArray = <T,>(items: T[], oldIndex: number, newIndex: number) => {
+  const updatedItems = [...items];
+  const [movedItem] = updatedItems.splice(oldIndex, 1);
+
+  if (!movedItem) {
+    return items;
+  }
+
+  updatedItems.splice(newIndex, 0, movedItem);
+  return updatedItems;
+};
 
 interface BudgetCardProps {
   amount?: number;
@@ -46,6 +57,7 @@ interface BudgetCardProps {
   onTitleChange?: (newTitle: string) => void;
   onItemDragEnd?: (itemId: string, newIndex: number) => void;
   onNoteDragEnd?: (noteId: string, newIndex: number) => void;
+  onDelayedCompletedCountChange?: (count: number) => void;
 }
 
 export const BudgetCard: React.FC<BudgetCardProps> = ({
@@ -67,6 +79,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   onTitleChange = () => {},
   onItemDragEnd = () => {},
   onNoteDragEnd = () => {},
+  onDelayedCompletedCountChange = () => {},
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(cellTitle);
@@ -75,9 +88,20 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   >(items);
   const [localAmount, setLocalAmount] = useState(amount || 0);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [delayedCompletedIds, setDelayedCompletedIds] = useState<string[]>([]);
 
   const textColor = getContrastTextColor(backgroundColor);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
+  const delayedHideTimeoutsRef = React.useRef<Record<string, number>>({});
+  const previousCompletedIdsRef = React.useRef<Set<string>>(new Set());
+  const isFirstCompletedSyncRef = React.useRef(true);
+
+  const clearDelayedCompletionTimeouts = useCallback(() => {
+    Object.values(delayedHideTimeoutsRef.current).forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    delayedHideTimeoutsRef.current = {};
+  }, []);
 
   // Настройка сенсоров для DnD
   const sensors = useSensors(
@@ -90,8 +114,35 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
   // Синхронизация с пропсами
   useEffect(() => {
-    setLocalItems(items);
-  }, [items]);
+    if (isNotesColumn) {
+      setLocalItems(items);
+      return;
+    }
+
+    setLocalItems((previousItems) => {
+      if (delayedCompletedIds.length === 0) {
+        return items;
+      }
+
+      const incomingItems = items as ChecklistItemModel[];
+      const previousChecklistItems = previousItems as ChecklistItemModel[];
+      const incomingById = new Map(
+        incomingItems.map((item) => [item.id, item] as const),
+      );
+
+      const preservedOrderItems = previousChecklistItems
+        .map((item) => incomingById.get(item.id))
+        .filter(
+          (item): item is ChecklistItemModel => item !== undefined,
+        );
+
+      const remainingItems = incomingItems.filter(
+        (item) => !previousChecklistItems.some((prevItem) => prevItem.id === item.id),
+      );
+
+      return [...preservedOrderItems, ...remainingItems];
+    });
+  }, [delayedCompletedIds.length, isNotesColumn, items]);
 
   useEffect(() => {
     setTempTitle(cellTitle);
@@ -102,6 +153,95 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       setLocalAmount(amount);
     }
   }, [amount]);
+
+  // После отметки чекбокса оставляем пункт на месте еще на пару секунд.
+  useEffect(() => {
+    if (isNotesColumn) {
+      clearDelayedCompletionTimeouts();
+      setDelayedCompletedIds([]);
+      previousCompletedIdsRef.current = new Set();
+      isFirstCompletedSyncRef.current = true;
+      return;
+    }
+
+    const checklistItems = items as ChecklistItemModel[];
+    const completedIds = new Set(
+      checklistItems
+        .filter((item) => item.completed)
+        .map((item) => item.id),
+    );
+
+    if (isEditMode) {
+      clearDelayedCompletionTimeouts();
+      setDelayedCompletedIds([]);
+      previousCompletedIdsRef.current = completedIds;
+      isFirstCompletedSyncRef.current = false;
+      return;
+    }
+
+    if (isFirstCompletedSyncRef.current) {
+      previousCompletedIdsRef.current = completedIds;
+      isFirstCompletedSyncRef.current = false;
+      return;
+    }
+
+    const newlyCompletedIds = Array.from(completedIds).filter(
+      (id) => !previousCompletedIdsRef.current.has(id),
+    );
+
+    if (newlyCompletedIds.length > 0) {
+      setDelayedCompletedIds((currentIds) =>
+        Array.from(new Set([...currentIds, ...newlyCompletedIds])),
+      );
+    }
+
+    newlyCompletedIds.forEach((id) => {
+      if (delayedHideTimeoutsRef.current[id]) {
+        window.clearTimeout(delayedHideTimeoutsRef.current[id]);
+      }
+
+      delayedHideTimeoutsRef.current[id] = window.setTimeout(() => {
+        setDelayedCompletedIds((currentIds) =>
+          currentIds.filter((currentId) => currentId !== id),
+        );
+        delete delayedHideTimeoutsRef.current[id];
+      }, COMPLETED_ITEM_HIDE_DELAY_MS);
+    });
+
+    Object.keys(delayedHideTimeoutsRef.current).forEach((id) => {
+      if (!completedIds.has(id)) {
+        window.clearTimeout(delayedHideTimeoutsRef.current[id]);
+        delete delayedHideTimeoutsRef.current[id];
+      }
+    });
+
+    setDelayedCompletedIds((currentIds) =>
+      currentIds.filter((id) => completedIds.has(id)),
+    );
+
+    previousCompletedIdsRef.current = completedIds;
+  }, [clearDelayedCompletionTimeouts, isEditMode, items, isNotesColumn]);
+
+  useEffect(
+    () => () => {
+      clearDelayedCompletionTimeouts();
+    },
+    [clearDelayedCompletionTimeouts],
+  );
+
+  useEffect(() => {
+    if (isNotesColumn || isEditMode) {
+      onDelayedCompletedCountChange(0);
+      return;
+    }
+
+    onDelayedCompletedCountChange(delayedCompletedIds.length);
+  }, [
+    delayedCompletedIds.length,
+    isEditMode,
+    isNotesColumn,
+    onDelayedCompletedCountChange,
+  ]);
 
   // РАЗДЕЛЯЕМ ПУНКТЫ НА АКТИВНЫЕ И ВЫПОЛНЕННЫЕ
   const { activeItems, completedItems } = useMemo(() => {
@@ -115,10 +255,14 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     const checklistItems = localItems as ChecklistItemModel[];
 
     // Активные (не выполненные) пункты
-    const active = checklistItems.filter((item) => !item.completed);
+    const active = checklistItems.filter(
+      (item) => !item.completed || delayedCompletedIds.includes(item.id),
+    );
 
     // Выполненные пункты
-    const completed = checklistItems.filter((item) => item.completed);
+    const completed = checklistItems.filter(
+      (item) => item.completed && !delayedCompletedIds.includes(item.id),
+    );
 
     // Сортируем выполненные: самые свежие сверху
     const sortedCompleted = [...completed].sort(
@@ -131,19 +275,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       activeItems: active,
       completedItems: sortedCompleted,
     };
-  }, [localItems, isNotesColumn]);
-
-  // ВИДИМЫЕ ВЫПОЛНЕННЫЕ ПУНКТЫ (первые 2)
-  const visibleCompletedItems = useMemo(() => {
-    if (isNotesColumn || !isEditMode) return [];
-    return (completedItems as ChecklistItemModel[]).slice(0, 2);
-  }, [completedItems, isNotesColumn, isEditMode]);
-
-  // СКРЫТЫЕ ВЫПОЛНЕННЫЕ ПУНКТЫ (остальные для скролла)
-  const hiddenCompletedItems = useMemo(() => {
-    if (isNotesColumn || !isEditMode) return [];
-    return (completedItems as ChecklistItemModel[]).slice(2);
-  }, [completedItems, isNotesColumn, isEditMode]);
+  }, [delayedCompletedIds, isNotesColumn, localItems]);
 
   // Рассчет суммы активных расходов
   useEffect(() => {
@@ -180,8 +312,25 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
       if (oldIndex !== -1 && newIndex !== -1) {
         if (isNotesColumn) {
+          setLocalItems((previousItems) =>
+            moveInArray(previousItems as NoteModel[], oldIndex, newIndex),
+          );
           onNoteDragEnd(active.id as string, newIndex);
         } else {
+          setLocalItems((previousItems) => {
+            const checklistItems = previousItems as ChecklistItemModel[];
+            const activeChecklistItems = checklistItems.filter(
+              (item) => !item.completed,
+            );
+            const completedChecklistItems = checklistItems.filter(
+              (item) => item.completed,
+            );
+
+            return [
+              ...moveInArray(activeChecklistItems, oldIndex, newIndex),
+              ...completedChecklistItems,
+            ];
+          });
           onItemDragEnd(active.id as string, newIndex);
         }
       }
@@ -217,12 +366,51 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     onColorChange(color);
   };
 
-  const handleTitleSave = () => {
+  const handleItemToggle = useCallback(
+    (id: string) => {
+      if (isNotesColumn || isEditMode) {
+        onItemToggle(id);
+        return;
+      }
+
+      const checklistItems = localItems as ChecklistItemModel[];
+      const targetItem =
+        checklistItems.find((item) => item.id === id) ??
+        (items as ChecklistItemModel[]).find((item) => item.id === id);
+
+      if (targetItem && !targetItem.completed && !delayedCompletedIds.includes(id)) {
+        const nextDelayedIds = [...delayedCompletedIds, id];
+        setDelayedCompletedIds(nextDelayedIds);
+        onDelayedCompletedCountChange(nextDelayedIds.length);
+      }
+
+      if (targetItem?.completed && delayedCompletedIds.includes(id)) {
+        const nextDelayedIds = delayedCompletedIds.filter(
+          (delayedId) => delayedId !== id,
+        );
+        setDelayedCompletedIds(nextDelayedIds);
+        onDelayedCompletedCountChange(nextDelayedIds.length);
+      }
+
+      onItemToggle(id);
+    },
+    [
+      delayedCompletedIds,
+      isEditMode,
+      isNotesColumn,
+      items,
+      localItems,
+      onDelayedCompletedCountChange,
+      onItemToggle,
+    ],
+  );
+
+  const handleTitleSave = useCallback(() => {
     if (tempTitle.trim() && tempTitle !== cellTitle) {
       onTitleChange(tempTitle.trim());
     }
     setIsEditingTitle(false);
-  };
+  }, [cellTitle, onTitleChange, tempTitle]);
 
   const handleTitleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleTitleSave();
@@ -236,7 +424,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
-      titleInputRef.current.select();
     }
   }, [isEditingTitle]);
 
@@ -258,35 +445,24 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingTitle, tempTitle, cellTitle]);
+  }, [cellTitle, handleTitleSave, isEditingTitle, tempTitle]);
 
   return (
     <Box
-      sx={{
-        backgroundColor,
-        borderRadius: "10px",
-        padding: "20px",
-        minHeight: "350px",
-        height: "100%",
-        boxShadow: "-2px 2px 1px rgba(0, 0, 0, 0.25)",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        transition: "background-color 0.3s ease",
-      }}
+      className={styles.card}
+      style={
+        {
+          "--budget-card-bg": backgroundColor,
+          "--budget-card-text": textColor,
+          "--budget-card-shadow": getSurfaceShadowVariable(backgroundColor),
+          "--budget-card-scrollbar": backgroundColor,
+        } as React.CSSProperties
+      }
     >
       {/* Заголовок и сумма */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-          flexShrink: 0,
-        }}
-      >
+      <Box className={styles.header}>
         {/* Редактируемый заголовок */}
-        <Box sx={{ flex: 1 }}>
+        <Box className={styles.titleWrap}>
           {isEditMode && isEditingTitle ? (
             <input
               ref={titleInputRef}
@@ -295,28 +471,14 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               onChange={(e) => setTempTitle(e.target.value)}
               onKeyDown={handleTitleKeyPress}
               onBlur={handleTitleSave}
-              style={{
-                border: "none",
-                borderRadius: "5px",
-                padding: "8px 12px",
-                fontSize: "24px",
-                width: "100%",
-                fontFamily: '"Roboto Condensed", sans-serif',
-                color: textColor,
-                backgroundColor: "transparent",
-                fontWeight: "normal",
-              }}
+              className={styles.titleInput}
             />
           ) : (
             <Typography
               onClick={() => isEditMode && setIsEditingTitle(true)}
-              sx={{
-                fontSize: "24px",
-                fontWeight: "normal",
-                color: textColor,
-                cursor: isEditMode ? "text" : "default",
-                fontFamily: '"Roboto Condensed", sans-serif',
-              }}
+              className={`${styles.title} ${
+                isEditMode ? styles.titleEditable : ""
+              }`}
             >
               {cellTitle.toUpperCase()}
             </Typography>
@@ -325,15 +487,8 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
         {/* Сумма активных расходов */}
         {!isNotesColumn && localAmount !== undefined && (
-          <Box sx={{ minWidth: "120px", textAlign: "right" }}>
-            <Typography
-              sx={{
-                fontSize: "24px",
-                fontWeight: "normal",
-                color: textColor,
-                fontFamily: '"Roboto Condensed", sans-serif',
-              }}
-            >
+          <Box className={styles.amountWrap}>
+            <Typography className={styles.amount}>
               {localAmount.toLocaleString("ru-RU")}₽
             </Typography>
           </Box>
@@ -341,16 +496,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       </Box>
 
       {/* ОСНОВНОЙ КОНТЕНТ - БЕЗ СКРОЛЛА ДЛЯ АКТИВНЫХ ПУНКТОВ */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "hidden",
-          paddingRight: "5px",
-          marginBottom: "20px",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <Box className={styles.content}>
         {isNotesColumn ? (
           // ЗАМЕТКИ
           <DndContext
@@ -376,78 +522,32 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
               {/* КНОПКА ДОБАВЛЕНИЯ ЗАМЕТКИ В РЕЖИМЕ РЕДАКТИРОВАНИЯ */}
               {isEditMode && (
-                <Box
+                <button
+                  type="button"
                   onClick={onAddNote}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    backgroundColor: "#FFFFFF",
-                    color: "#101010",
-                    border: "1px solid #D9D9D9",
-                    borderRadius: "10px",
-                    padding: "15px",
-                    marginBottom: "10px",
-                    fontSize: "24px",
-                    cursor: "pointer",
-                    fontFamily: '"Roboto Condensed", sans-serif',
-                    position: "relative",
-                    boxShadow: "1px 1px 0.5px rgba(0, 0, 0, 0.25)",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      boxShadow: "2px 2px 2px rgba(0, 0, 0, 0.3)",
-                    },
-                  }}
+                  className={styles.addButton}
                 >
-                  <Box sx={{ flex: 1, textAlign: "center" }}>
-                    <span style={{ fontSize: "24px" }}>＋</span>
+                  <Box className={styles.addButtonCenter}>
+                    <span className={styles.addButtonIcon}>+</span>
                   </Box>
-                </Box>
+                </button>
               )}
 
               {/* Сообщение если нет заметок */}
               {(activeItems as NoteModel[]).length === 0 && !isEditMode && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: "100px",
-                    color: textColor,
-                    opacity: 0.7,
-                    fontFamily: '"Roboto Condensed", sans-serif',
-                  }}
-                >
-                  <Typography>Пока нет заметок</Typography>
+                <Box className={styles.emptyMessage}>
+                  <div className={styles.emptyMessageText}>Пока нет заметок</div>
                 </Box>
               )}
             </SortableContext>
 
             <DragOverlay>
               {activeItem && isNotesColumn && (
-                <div
-                  style={{
-                    opacity: 0.8,
-                    transform: "rotate(5deg)",
-                    backgroundColor: "#FFFFFF",
-                    border: "2px solid #69B5D3",
-                    borderRadius: "10px",
-                    padding: "15px",
-                    boxShadow: "-4px 4px 8px rgba(0, 0, 0, 0.3)",
-                    maxWidth: "300px",
-                    pointerEvents: "none",
-                  }}
-                >
-                  <div style={{ fontSize: "16px", fontWeight: "bold" }}>
+                <div className={styles.dragPreview}>
+                  <div className={styles.dragPreviewTitle}>
                     {(activeItem as NoteModel).content.substring(0, 50)}...
                   </div>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginTop: "5px",
-                    }}
-                  >
+                  <div className={styles.dragPreviewMeta}>
                     {(activeItem as NoteModel).getSignature()}
                   </div>
                 </div>
@@ -457,7 +557,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
         ) : (
           // ПУНКТЫ РАСХОДОВ
           <>
-            <Box sx={{ flex: "0 0 auto", overflowY: "visible" }}>
+            <Box className={styles.activeItemsWrap}>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
@@ -478,129 +578,64 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                       isEditing={isEditMode}
                       onUpdate={handleItemUpdate}
                       onDelete={(id) => onItemDelete(id)}
-                      onToggle={(id) => onItemToggle(id)}
+                      onToggle={handleItemToggle}
                       backgroundColor={backgroundColor}
                     />
                   ))}
 
                   {/* КНОПКА ДОБАВЛЕНИЯ В РЕЖИМЕ РЕДАКТИРОВАНИЯ */}
                   {isEditMode && (
-                    <Box
+                    <button
+                      type="button"
                       onClick={onAddItem}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        backgroundColor: "#FFFFFF",
-                        color: "#101010",
-                        border: "1px solid #D9D9D9",
-                        borderRadius: "10px",
-                        padding: "15px",
-                        marginBottom: "10px",
-                        fontSize: "24px",
-                        cursor: "pointer",
-                        fontFamily: '"Roboto Condensed", sans-serif',
-                        position: "relative",
-                        boxShadow: "1px 1px 0.5px rgba(0, 0, 0, 0.25)",
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          boxShadow: "2px 2px 2px rgba(0, 0, 0, 0.3)",
-                        },
-                      }}
+                      className={styles.addButton}
                     >
-                      <Box sx={{ flex: 1, textAlign: "center" }}>
-                        <span style={{ fontSize: "24px" }}>＋</span>
+                      <Box className={styles.addButtonCenter}>
+                        <span className={styles.addButtonIcon}>+</span>
                       </Box>
-                    </Box>
+                    </button>
                   )}
                 </SortableContext>
 
-                <DragOverlay>
-                  {activeItem && !isNotesColumn && (
-                    <div
-                      style={{
-                        opacity: 0.8,
-                        transform: "rotate(5deg)",
-                        backgroundColor: "#FFFFFF",
-                        border: "2px solid #69B5D3",
-                        borderRadius: "10px",
-                        padding: "15px",
-                        boxShadow: "-4px 4px 8px rgba(0, 0, 0, 0.3)",
-                        maxWidth: "300px",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      <div style={{ fontSize: "18px", fontWeight: "bold" }}>
-                        {(activeItem as ChecklistItemModel).title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "16px",
-                          color: "#666",
-                          marginTop: "5px",
-                        }}
-                      >
-                        {(
-                          activeItem as ChecklistItemModel
-                        ).amount.toLocaleString("ru-RU")}
-                        ₽
-                      </div>
-                    </div>
-                  )}
-                </DragOverlay>
               </DndContext>
             </Box>
 
             {/* ВЫПОЛНЕННЫЕ ПУНКТЫ (только в режиме редактирования) */}
             {isEditMode && (
               <Box
-                sx={{
-                  flex: "0 0 auto",
-                  minHeight: "0",
-                  borderTop:
-                    completedItems.length > 0
-                      ? "1px solid rgba(255, 255, 255, 0.3)"
-                      : "none",
-                  marginTop: completedItems.length > 0 ? "10px" : "0",
-                  paddingTop: completedItems.length > 0 ? "10px" : "0",
-                  position: "relative",
-                  // Динамическая высота: показываем максимум 2 выполненных пункта
+                className={`${styles.completedSection} ${
+                  completedItems.length > 0 ? styles.completedSectionWithItems : ""
+                }`}
+                style={{
                   height: completedItems.length > 0 ? "auto" : "0",
-                  maxHeight:
-                    completedItems.length > 2 ? "calc(2 * 85px)" : "none",
-                  overflowY: completedItems.length > 2 ? "scroll" : "hidden",
+                  overflowX: "hidden",
                 }}
               >
-                {/* ВСЕ ВЫПОЛНЕННЫЕ ПУНКТЫ */}
-                {completedItems.map((item) => (
-                  <ChecklistItem
-                    key={`completed-${item.id}`}
-                    item={item}
-                    isEditing={isEditMode}
-                    onUpdate={handleItemUpdate}
-                    onDelete={(id) => onItemDelete(id)}
-                    onToggle={(id) => onItemToggle(id)}
-                    backgroundColor={backgroundColor}
-                  />
-                ))}
+                <Box
+                  className={`${styles.completedScroller} ${
+                    completedItems.length > 2 ? styles.completedScrollerScrollable : ""
+                  }`}
+                >
+                  {/* ВСЕ ВЫПОЛНЕННЫЕ ПУНКТЫ */}
+                  {completedItems.map((item) => (
+                    <ChecklistItem
+                      key={`completed-${item.id}`}
+                      item={item}
+                      isEditing={isEditMode}
+                      onUpdate={handleItemUpdate}
+                      onDelete={(id) => onItemDelete(id)}
+                      onToggle={handleItemToggle}
+                      backgroundColor={backgroundColor}
+                    />
+                  ))}
 
-                {/* Сообщение если нет выполненных пунктов */}
-                {completedItems.length === 0 && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      height: "60px",
-                      color: textColor,
-                      opacity: 0.5,
-                      fontFamily: '"Roboto Condensed", sans-serif',
-                      fontSize: "16px",
-                    }}
-                  >
-                    <Typography>Нет выполненных пунктов</Typography>
-                  </Box>
-                )}
+                  {/* Сообщение если нет выполненных пунктов */}
+                  {completedItems.length === 0 && (
+                    <Box className={styles.completedEmptyMessage}>
+                      <Typography>Нет выполненных пунктов</Typography>
+                    </Box>
+                  )}
+                </Box>
               </Box>
             )}
           </>

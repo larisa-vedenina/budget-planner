@@ -1,0 +1,85 @@
+@use "../../styles/functions" as *;
+
+/* Общая оболочка страницы формы. */
+.page {
+  min-height: 100vh;
+  padding: rem(32) rem(12);
+  background: var(--page-background-form);
+}
+
+.container {
+  width: min(100%, rem(750));
+  margin: rem(50) auto 0 ;
+}
+
+.bottomNav {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: rem(24);
+}
+
+.backButton {
+  min-height: rem(48);
+  padding: rem(10) rem(18);
+  border: rem(3) solid var(--color-accent-blue);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-accent-blue);
+  color: var(--color-text-primary);
+  font-size: rem(18);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.backButton:hover {
+  transform: translate(-rem(1), rem(1));
+  box-shadow: var(--shadow-accent-blue);
+}
+
+.sectionBlock {
+  margin-bottom: rem(20);
+}
+
+/* Блок кнопок подключения дополнительных секций. */
+.additionalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: rem(15);
+  margin-bottom: rem(20);
+}
+
+.additionalButton {
+  min-width: rem(192);
+}
+
+.aiSection {
+  margin-bottom: rem(20);
+}
+
+/* Нижний CTA держим отдельно, чтобы проще управлять отступом до формы. */
+.createRow {
+  display: flex;
+  justify-content: center;
+  margin-top: rem(24);
+  margin-bottom: rem(24);
+}
+
+.createButton {
+  width: min(100%, rem(342));
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: rem(24) rem(12);
+  }
+
+  .bottomNav {
+    margin-bottom: rem(20);
+  }
+
+  .additionalButton {
+    width: 100%;
+  }
+}

@@ -1,0 +1,306 @@
+@use "../../../styles/functions" as *;
+
+.item {
+  display: flex;
+  width: calc(100% - rem(8));
+  max-width: calc(100% - rem(8));
+  align-items: center;
+  justify-content: space-between;
+  gap: rem(12);
+  background: var(--item-bg, var(--color-white));
+  color: var(--color-text-primary);
+  border: rem(2) solid var(--item-border, var(--color-white));
+  border-radius: var(--radius-md);
+  height: rem(65);
+  min-height: rem(65);
+  padding: rem(12) rem(15);
+  margin-bottom: rem(10);
+  font-size: rem(24);
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+  position: relative;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.itemEditable {
+  box-shadow: var(--budget-card-shadow, var(--shadow-neutral-edit));
+}
+
+.itemEditable:hover {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.itemPriority {
+  --item-border: var(--priority-border-color, var(--color-accent-red));
+}
+
+.itemCompleted::after {
+  content: "";
+  position: absolute;
+  left: var(--completed-strike-left, rem(95));
+  right: var(--completed-strike-right, rem(15));
+  top: 50%;
+  height: rem(1);
+  background: var(--completed-strike-color, var(--checkbox-color));
+  border-radius: rem(999);
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+.left {
+  margin-right: rem(8);
+  display: flex;
+  align-items: center;
+  gap: rem(6);
+  min-width: rem(68);
+}
+
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: rem(24);
+  height: rem(24);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: grab;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandleIcon {
+  font-size: rem(22);
+}
+
+.iconButton {
+  cursor: pointer;
+  padding: rem(4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.starActive {
+  color: var(--priority-border-color, var(--color-accent-red));
+  font-size: rem(28);
+}
+
+.starInactive {
+  color: var(--color-border);
+  font-size: rem(28);
+}
+
+.checkbox {
+  width: rem(24);
+  height: rem(24);
+  border: var(--checkbox-border, rem(1) solid var(--color-border));
+  border-radius: rem(5);
+  box-shadow: var(
+    --checkbox-shadow,
+    -rem(1) rem(1) rem(0.5) rgba(0, 0, 0, 0.25)
+  );
+  transform: var(--checkbox-transform, none);
+  background: var(--checkbox-bg, var(--color-white));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.itemEditable:hover .checkbox {
+  box-shadow: var(--checkbox-hover-shadow, none);
+  transform: var(--checkbox-hover-transform, none);
+}
+
+.checkboxCompleted {
+  --checkbox-border: none;
+  --checkbox-shadow: none;
+  --checkbox-transform: translate(-rem(1), rem(1));
+  --checkbox-bg: var(--checkbox-color, var(--color-white));
+  --checkbox-hover-shadow: none;
+  --checkbox-hover-transform: translate(-rem(1), rem(1));
+}
+
+.checkboxInner {
+  width: rem(12);
+  height: rem(12);
+  border-radius: 50%;
+  background: var(--checkbox-color, var(--color-white));
+}
+
+.content {
+  flex: 1 1 auto;
+  margin-right: rem(16);
+  min-height: rem(36);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  max-width: calc(100% - rem(280));
+}
+
+.textInput {
+  width: 100%;
+  height: rem(40);
+  min-height: rem(40);
+  border: none;
+  padding: rem(4) 0;
+  font-size: rem(24);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.textDisplay {
+  width: 100%;
+  min-height: rem(40);
+  display: flex;
+  align-items: center;
+  padding: rem(4) 0;
+  font-size: rem(24);
+  color: var(--color-text-primary);
+}
+
+.textDisplayEditable {
+  cursor: text;
+}
+
+.textCompleted {
+  text-decoration: none;
+}
+
+.amountWrap {
+  min-width: rem(120);
+  text-align: right;
+}
+
+.amountWrapEditing {
+  margin-right: 0;
+}
+
+.amountEditor {
+  display: flex;
+  width: 100%;
+  min-height: rem(40);
+  align-items: center;
+  justify-content: flex-end;
+  gap: rem(2);
+}
+
+.amountInput {
+  width: rem(100);
+  min-height: rem(40);
+  border: none;
+  padding: 0;
+  font-size: rem(24);
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: right;
+  color: var(--color-text-primary);
+  background: transparent;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  box-sizing: border-box;
+}
+
+.currency {
+  font-size: rem(24);
+  color: var(--color-text-primary);
+}
+
+.amountText {
+  min-height: rem(40);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: rem(24);
+  color: var(--color-text-primary);
+}
+
+.amountTextEditable {
+  cursor: text;
+}
+
+.amountInput::-webkit-outer-spin-button,
+.amountInput::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.deleteWrap {
+  margin-left: rem(8);
+  min-width: rem(32);
+  display: flex;
+  justify-content: center;
+}
+
+.deleteButton {
+  cursor: pointer;
+  padding: rem(4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deleteIcon {
+  color: var(--color-accent-red);
+  font-size: rem(28);
+  transition: transform var(--transition-fast);
+}
+
+.deleteButton:hover .deleteIcon {
+  transform: scale(1.08);
+}
+
+@media (max-width: 768px) {
+  .item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: rem(12);
+  }
+
+  .left {
+    margin-right: 0;
+    min-width: rem(68);
+  }
+
+  .content {
+    max-width: none;
+    min-width: 0;
+    width: calc(100% - rem(44));
+    margin-right: 0;
+  }
+
+  .amountWrap {
+    min-width: 0;
+    width: calc(100% - rem(44));
+    margin-left: rem(44);
+    text-align: left;
+  }
+
+  .amountEditor,
+  .amountText {
+    justify-content: flex-start;
+  }
+
+  .deleteWrap {
+    position: absolute;
+    top: rem(8);
+    right: rem(8);
+    margin-left: 0;
+  }
+}

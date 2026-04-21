@@ -1,0 +1,156 @@
+@use "./functions" as *;
+
+/* ============================================ ЛОКАЛЬНЫЕ ШРИФТЫ ============================================ */
+
+@font-face {
+  font-family: "Roboto Condensed";
+  src:
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff2")
+      format("woff2-variations"),
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-VariableFont_wght.woff")
+      format("woff-variations");
+  font-weight: 100 900;
+  font-stretch: 75% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Roboto Condensed";
+  src:
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff2")
+      format("woff2-variations"),
+    url("../../public/fonts/RobotoCondensed/RobotoCondensed-Italic-VariableFont_wght.woff")
+      format("woff-variations");
+  font-weight: 100 900;
+  font-stretch: 75% 125%;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ============================================ БАЗА ============================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  font-size: 100%;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family:
+    "Roboto Condensed",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--page-background-default);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+*:focus {
+  outline: none;
+}
+
+::selection {
+  background-color: rgba(105, 181, 211, 0.3);
+  color: var(--color-text-primary);
+}
+
+::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+/* ============================================ СКРОЛЛБАРЫ ============================================ */
+
+::-webkit-scrollbar {
+  width: rem(8);
+  height: rem(8);
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: rem(4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: rem(4);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c1c1c1;
+}
+
+/* ============================================ ДОСТУПНОСТЬ ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

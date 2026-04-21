@@ -1,23 +1,23 @@
 // Типы для API-запросов
 
-import { BudgetPeriod } from './budget';
-import { User, AuthResponse } from './user';
+import { FormInputItem } from "./form";
+import { User } from "./user";
 
 /**
  * Базовый интерфейс для API-ответов
  */
 export interface ApiResponse<T> {
-  data: T;           // Полезные данные
-  success: boolean;  // Успешность операции
-  message?: string;  // Сообщение (опционально)
-  timestamp: Date;   // Время ответа
+  data: T; // Полезные данные
+  success: boolean; // Успешность операции
+  message?: string; // Сообщение (опционально)
+  timestamp: string; // Время ответа
 }
 
 /**
  * Интерфейс для ошибок API
  */
 export interface ApiError {
-  code: string;      // Код ошибки
+  code: string; // Код ошибки
   message: string;   // Сообщение об ошибке
   details?: any;     // Детали ошибки (опционально)
 }
@@ -68,4 +68,50 @@ export interface MoveItemRequest {
   fromCategory: 'required' | 'desired';
   toCategory: 'required' | 'desired';
   newPosition: number;
+}
+
+export interface AIBudgetPlanRequest {
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  aiComment: string;
+  sections: {
+    income: FormInputItem[];
+    required: FormInputItem[];
+    desired: FormInputItem[];
+    assets: FormInputItem[];
+    debts: FormInputItem[];
+    goals: FormInputItem[];
+  };
+}
+
+export interface AIBudgetPlanItem {
+  title: string;
+  amount: number;
+  priority: boolean;
+}
+
+export interface AIBudgetPlanResponse {
+  summary: string;
+  totals: {
+    incomeTotal: number;
+    requiredTotal: number;
+    desiredTotal: number;
+    reserveAmount: number;
+  };
+  requiredItems: AIBudgetPlanItem[];
+  desiredItems: AIBudgetPlanItem[];
+  notes: string[];
+  warnings: string[];
+}
+
+export interface AuthUserResponse {
+  user: User;
+}
+
+export interface RequestOtpResponse {
+  phone: string;
+  name: string;
+  expiresAt: string;
 }

@@ -2,6 +2,7 @@
 import React from 'react';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import styles from "./LockToggle.module.scss";
 
 interface LockToggleProps {
   isLocked: boolean; // true = режим просмотра, false = режим редактирования
@@ -22,74 +23,34 @@ export const LockToggle: React.FC<LockToggleProps> = ({
   };
 
   const { icon: iconSize, button: buttonSize } = sizeMap[size];
+  const lockColor = isLocked ? "#D87B7B" : "#507B5D";
 
   return (
     <button
       onClick={onToggle}
-      style={{
-        width: `${buttonSize}px`,
-        height: `${buttonSize}px`,
-        borderRadius: '50%',
-        border: 'none',
-        backgroundColor: "transparent",
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        // boxShadow: '-2px 2px 1px rgba(0, 0, 0, 0.25)',
-        transition: 'all 0.2s ease',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+      type="button"
+      className={`${styles.button} ${!isLocked ? styles.buttonUnlocked : ""}`}
+      style={
+        {
+          "--lock-size": `${buttonSize / 16}rem`,
+          "--lock-color": lockColor,
+        } as React.CSSProperties
+      }
       aria-label={isLocked ? 'Разблокировать редактирование' : 'Заблокировать редактирование'}
       title={isLocked ? 'Нажмите для редактирования' : 'Нажмите для завершения редактирования'}
     >
-      {/* Анимация вращения */}
-      <div style={{
-        transition: 'transform 0.3s ease',
-        transform: isLocked ? 'rotate(0deg)' : 'rotate(180deg)',
-      }}>
+      <div className={styles.iconWrap}>
         {isLocked ? (
           <LockIcon
-            style={{
-              fontSize: iconSize,
-              color: '#D87B7B', // Красный для заблокированного
-            }}
+            className={styles.icon}
+            style={{ fontSize: iconSize }}
           />
         ) : (
           <LockOpenIcon
-            style={{
-              fontSize: iconSize,
-              color: '#507B5D', // Зеленый для разблокированного
-            }}
+            className={styles.icon}
+            style={{ fontSize: iconSize }}
           />
         )}
-      </div>
-
-      {/* Тонкая обводка в зависимости от состояния */}
-      {/* <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        borderRadius: '50%',
-        border: `3px solid ${isLocked ? '#D87B7B' : '#507B5D'}`,
-        pointerEvents: 'none',
-      }} /> */}
-
-      {/* Индикатор состояния (текстовая подсказка) */}
-      <div style={{
-        position: 'absolute',
-        bottom: '-25px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        fontSize: '12px',
-        color: isLocked ? '#D87B7B' : '#507B5D',
-        whiteSpace: 'nowrap',
-        fontWeight: 'bold',
-      }}>
-        {isLocked ? '🔒 Заблокировано' : '🔓 Редактирование'}
       </div>
     </button>
   );

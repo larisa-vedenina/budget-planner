@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { StartPage } from "../pages/StartPage/StartPage";
-import { FormPage } from "../pages/FormPage/FormPage";
+import FormPage from "../pages/FormPage/FormPage";
 import { LoginPage } from "../pages/LoginPage/LoginPage";
 import { ArchivePage } from "../pages/ArchivePage/ArchivePage";
 import { MainPage } from "../pages/MainPage/MainPage";

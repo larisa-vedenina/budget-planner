@@ -1,0 +1,99 @@
+@use "../../styles/functions" as *;
+
+.wrap {
+  position: fixed;
+  right: rem(20);
+  bottom: rem(20);
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+  --hint-border: var(--color-accent-blue);
+  --hint-shadow: var(--shadow-accent-blue);
+}
+
+.variantBlue {
+  --hint-border: var(--color-accent-blue);
+  --hint-shadow: var(--shadow-surface-blue-soft);
+}
+
+.variantRed {
+  --hint-border: var(--color-accent-red);
+  --hint-shadow: var(--shadow-surface-red-soft);
+}
+
+.variantGray {
+  --hint-border: var(--border-neutral);
+  --hint-shadow: var(--shadow-neutral-edit);
+}
+
+.button {
+  width: rem(36);
+  height: rem(36);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--hint-shadow);
+  color: var(--color-text-secondary);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.button:hover,
+.button:focus-visible {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+  background: var(--color-white);
+}
+
+.icon {
+  font-size: rem(20);
+}
+
+.tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + rem(10));
+  width: max-content;
+  max-width: min(calc(100vw - rem(32)), rem(320));
+  padding: rem(10) rem(14);
+  border: rem(2) solid var(--hint-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--hint-shadow);
+  color: var(--color-text-primary);
+  font-size: rem(15);
+  line-height: 1.35;
+  text-align: left;
+  transform: translateY(rem(6));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.wrap:hover .tooltip,
+.button:focus-visible + .tooltip,
+.tooltipVisible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.line + .line {
+  margin-top: rem(6);
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    right: rem(14);
+    bottom: rem(14);
+  }
+
+  .tooltip {
+    max-width: min(calc(100vw - rem(24)), rem(260));
+  }
+}

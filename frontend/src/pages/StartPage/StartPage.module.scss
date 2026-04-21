@@ -1,0 +1,79 @@
+@use "../../styles/functions" as *;
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: rem(32) rem(16);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.75), transparent 35%),
+    linear-gradient(180deg, var(--page-background-start) 0%, var(--color-white) 100%);
+}
+
+.panel {
+  width: min(100%, rem(340));
+  display: flex;
+  flex-direction: column;
+  gap: rem(16);
+}
+
+.logo {
+  margin: 0 0 rem(32);
+  text-align: center;
+  font-size: rem(28);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.actionButton {
+  width: 100%;
+  height: rem(60);
+  min-height: rem(60);
+  padding: rem(10) rem(20);
+  border: rem(4) solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--button-shadow, var(--shadow-accent-blue));
+  color: var(--color-text-primary);
+  font-size: rem(24);
+  line-height: 1.15;
+  text-transform: uppercase;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.actionButton:hover {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.actionButton:active {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.primaryButton {
+  border-color: var(--color-accent-red);
+  --button-shadow: var(--shadow-accent-red);
+}
+
+.secondaryButton {
+  border-color: var(--color-accent-blue);
+  --button-shadow: var(--shadow-accent-blue);
+}
+
+@media (max-width: 480px) {
+  .logo {
+    font-size: rem(24);
+    margin-bottom: rem(24);
+  }
+
+  .actionButton {
+    font-size: rem(18);
+  }
+}

@@ -1,5 +1,6 @@
 // components/layout/Header/TimerReminder.tsx
 import React, { useState, useEffect } from 'react';
+import styles from "./TimerReminder.module.scss";
 
 interface TimerReminderProps {
   startDate: Date;
@@ -95,45 +96,21 @@ export const TimerReminder: React.FC<TimerReminderProps> = ({
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '0', 
-    }}>
+    <div className={styles.root}>
       {/* Основной период - всегда отображается */}
-      <div style={{
-        fontSize: '24px',
-        fontWeight: 'normal',
-        color: '#0D0D0D', 
-        textAlign: 'center',
-        fontFamily: '"Roboto Condensed", sans-serif',
-      }}>
+      <div className={styles.periodText}>
         {formatDate(new Date(startDate))} – {formatDate(new Date(endDate))}
       </div>
 
       {/* Напоминание - появляется только когда осталось ≤ 7 дней */}
       {showReminder && (
-        <div style={{
-          fontSize: '16px', 
-          fontWeight: 'normal',
-          color: getReminderColor(), 
-          textAlign: 'center',
-          fontFamily: '"Roboto Condensed", sans-serif',
-          animation: 'fadeIn 0.3s ease',
-          minHeight: '20px', 
-        }}>
+        <div
+          className={styles.reminderText}
+          style={{ "--reminder-color": getReminderColor() } as React.CSSProperties}
+        >
           {reminderText}
         </div>
       )}
-      
-      {/* Добавляем анимацию в глобальные стили */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 };

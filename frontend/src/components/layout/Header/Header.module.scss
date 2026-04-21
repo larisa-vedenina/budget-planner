@@ -1,0 +1,202 @@
+@use "../../../styles/functions" as *;
+
+.header {
+  position: static;
+  z-index: 100;
+  width: 100%;
+  max-width: rem(1600);
+  margin: 0 auto;
+  padding: rem(32) rem(20) rem(24);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: rem(16);
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.budgetBlock {
+  display: flex;
+  flex-direction: column;
+  gap: rem(4);
+  min-width: rem(200);
+  min-height: rem(82);
+  justify-self: start;
+}
+
+.budgetLine {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  width: max-content;
+  min-height: rem(39);
+}
+
+.budgetInput,
+.budgetLabel,
+.currency,
+.budgetSizer,
+.budgetValueStatic {
+  font-family: "Roboto Condensed", sans-serif;
+  letter-spacing: 0.01em;
+  font-variant-numeric: lining-nums proportional-nums;
+  line-height: 1.2;
+}
+
+.budgetValueWrap {
+  position: relative;
+  display: inline-block;
+  min-width: 1ch;
+}
+
+.budgetInput,
+.budgetSizer {
+  white-space: pre;
+}
+
+.budgetInput {
+  position: absolute;
+  inset: 0;
+  min-width: 1ch;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  line-height: 1.2;
+  outline: none;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.budgetSizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.budgetText {
+  margin: 0;
+}
+
+.editableText {
+  cursor: pointer;
+}
+
+.budgetLabel {
+  white-space: pre;
+}
+
+.budgetValueStatic {
+  display: inline-block;
+}
+
+.remainingText {
+  margin: 0;
+  font-size: rem(32);
+  line-height: 1.2;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  min-height: rem(39);
+}
+
+.remainingTextHidden {
+  visibility: hidden;
+}
+
+.centerBlock {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: rem(400);
+  justify-self: center;
+  width: 100%;
+}
+
+.periodPickerWrap {
+  width: 100%;
+  max-width: rem(300);
+}
+
+.periodDisplay {
+  cursor: default;
+  width: 100%;
+  max-width: rem(300);
+  min-height: rem(50);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+}
+
+.periodDisplayContent {
+  flex: 1;
+  min-height: rem(50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.periodDisplaySpacer {
+  width: rem(50);
+  height: rem(50);
+  flex-shrink: 0;
+}
+
+.periodDisplayEditable {
+  cursor: pointer;
+}
+
+.actionsBlock {
+  display: flex;
+  align-items: center;
+  gap: rem(12);
+  justify-content: flex-end;
+  min-width: rem(180);
+  justify-self: end;
+}
+
+.currency {
+  line-height: 1.2;
+  color: inherit;
+  white-space: nowrap;
+  margin-left: 0;
+}
+
+@media (max-width: 768px) {
+  .header {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: column;
+    padding: rem(20) rem(12) rem(16);
+    align-items: stretch;
+  }
+
+  .budgetBlock,
+  .centerBlock,
+  .actionsBlock {
+    width: 100%;
+    max-width: none;
+  }
+
+  .centerBlock {
+    align-items: flex-start;
+  }
+
+  .actionsBlock {
+    justify-content: space-between;
+  }
+
+  .periodPickerWrap {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 899px) {
+  .header {
+    padding-inline: rem(12);
+  }
+}

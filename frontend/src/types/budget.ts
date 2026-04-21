@@ -92,6 +92,10 @@ export function getColorCategory(color: CellColor): ColorCategory {
  * @returns Цвет текста: #424242 для светлого фона, #F9F9F9 для темного
  */
 export function getContrastTextColor(backgroundColor: CellColor): TextColor {
+  if (backgroundColor === '#FCD688') {
+    return '#F9F9F9';
+  }
+
   const category = getColorCategory(backgroundColor);
   return category === 'light' ? '#424242' : '#F9F9F9';
 }
@@ -174,7 +178,7 @@ export function createDefaultBudgetPeriod(): BudgetPeriod {
     },
     cellTitles: { // ДОБАВЛЕНО: дефолтные заголовки ячеек
       required: 'ОБЯЗАТЕЛЬНЫЕ',
-      desired: 'ЖЕЛАЕМЫЕ',
+      desired: 'НЕОБЯЗАТЕЛЬНЫЕ',
       notes: 'ЗАМЕТКИ'
     },
     createdAt: now,

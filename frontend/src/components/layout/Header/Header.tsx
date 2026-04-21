@@ -1,11 +1,13 @@
-// components/layout/Header/Header.tsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BudgetPeriod } from "../../../types/budget";
 import LockToggle from "../../ui/LockToggle";
 import TimerReminder from "./TimerReminder";
-import { Box, Typography } from "@mui/material";
+import ProfileMenu from "./ProfileMenu";
+import { Box } from "@mui/material";
 import { useBudget } from "../../../contexts/BudgetContext";
 import { calculateCompletedExpenses } from "../../../types/budget";
+import DateRangePicker from "../../forms/DateRangePicker";
+import styles from "./Header.module.scss";
 
 interface HeaderProps {
   budget: BudgetPeriod;
@@ -19,130 +21,115 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleEditMode,
 }) => {
   const { updateBudgetIncome, updatePeriod } = useBudget();
-  
-  // Состояния для редактирования бюджета
+
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [tempBudget, setTempBudget] = useState(budget.totalIncome.toString());
+  const budgetEditRef = useRef<HTMLDivElement>(null);
   const budgetInputRef = useRef<HTMLInputElement>(null);
-  
-  // Состояния для редактирования периода
-  const [isEditingPeriod, setIsEditingPeriod] = useState(false);
+
   const [tempStartDate, setTempStartDate] = useState(
-    new Date(budget.startDate).toISOString().split('T')[0]
+    new Date(budget.startDate).toISOString().split("T")[0],
   );
   const [tempEndDate, setTempEndDate] = useState(
-    new Date(budget.endDate).toISOString().split('T')[0]
+    new Date(budget.endDate).toISOString().split("T")[0],
   );
-  const periodInputRef = useRef<HTMLDivElement>(null);
 
-  // Рассчитываем выполненные расходы (используем функцию из types/budget)
   const completedExpenses = calculateCompletedExpenses(budget);
-  
-  // Рассчитываем оставшийся бюджет (доход минус выполненные расходы)
   const remaining = budget.totalIncome - completedExpenses;
-  
-  // Проверяем, есть ли выполненные пункты
   const hasCompletedItems = completedExpenses > 0;
+  const budgetTextColor = hasCompletedItems ? "#5B5B5B" : "#0D0D0D";
+  const budgetFontSize = hasCompletedItems ? "24px" : "32px";
+  const formattedBudget = budget.totalIncome.toLocaleString("ru-RU");
+  const remainingText = hasCompletedItems
+    ? `Осталось: ${remaining.toLocaleString("ru-RU")}₽`
+    : "\u00A0";
 
-  // Фокус на инпут бюджета при начале редактирования
   useEffect(() => {
     if (isEditingBudget && budgetInputRef.current) {
       budgetInputRef.current.focus();
-      // Используем безопасный вызов select()
-      try {
-        if (typeof budgetInputRef.current.select === 'function') {
-          budgetInputRef.current.select();
-        }
-      } catch (error) {
-        console.log('Не удалось выделить текст:', error);
-      }
     }
   }, [isEditingBudget]);
 
-  // Обработчик сохранения бюджета
-  const handleBudgetSave = () => {
-    const newBudget = parseFloat(tempBudget);
-    if (!isNaN(newBudget) && newBudget >= 0 && newBudget !== budget.totalIncome) {
-      console.log('Header: Сохранение бюджета', newBudget);
+  useEffect(() => {
+    if (!isEditingBudget) {
+      setTempBudget(budget.totalIncome.toString());
+    }
+  }, [budget.totalIncome, isEditingBudget]);
+
+  useEffect(() => {
+    setTempStartDate(new Date(budget.startDate).toISOString().split("T")[0]);
+    setTempEndDate(new Date(budget.endDate).toISOString().split("T")[0]);
+  }, [budget.endDate, budget.startDate]);
+
+  const handleBudgetSave = useCallback(() => {
+    const normalizedBudget = tempBudget.trim();
+
+    if (!normalizedBudget) {
+      setTempBudget(budget.totalIncome.toString());
+      setIsEditingBudget(false);
+      return;
+    }
+
+    const newBudget = Number.parseInt(normalizedBudget, 10);
+    if (!Number.isNaN(newBudget) && newBudget >= 0 && newBudget !== budget.totalIncome) {
       updateBudgetIncome(newBudget);
     }
     setIsEditingBudget(false);
-  };
+  }, [budget.totalIncome, tempBudget, updateBudgetIncome]);
 
-  // Обработчик нажатия клавиш для бюджета
   const handleBudgetKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleBudgetSave();
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       setTempBudget(budget.totalIncome.toString());
       setIsEditingBudget(false);
     }
   };
 
-  // Обработчик потери фокуса для бюджета
   const handleBudgetBlur = () => {
     handleBudgetSave();
   };
 
-  // Обработчик сохранения периода
-  const handlePeriodSave = () => {
-    const startDate = new Date(tempStartDate);
-    const endDate = new Date(tempEndDate);
-    
-    if (startDate && endDate && startDate <= endDate) {
-      console.log('Header: Сохранение периода', { startDate, endDate });
-      updatePeriod(startDate, endDate);
-    }
-    setIsEditingPeriod(false);
-  };
+  const handlePeriodChange = useCallback(
+    (start: string, end: string) => {
+      setTempStartDate(start);
+      setTempEndDate(end);
 
-  // Обработчик нажатия клавиш для периода
-  const handlePeriodKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handlePeriodSave();
-    }
-    if (e.key === 'Escape') {
-      setTempStartDate(new Date(budget.startDate).toISOString().split('T')[0]);
-      setTempEndDate(new Date(budget.endDate).toISOString().split('T')[0]);
-      setIsEditingPeriod(false);
-    }
-  };
+      if (!start || !end) {
+        return;
+      }
 
-  // Обработчик потери фокуса для периода
-  const handlePeriodBlur = () => {
-    handlePeriodSave();
-  };
+      const startDate = new Date(start);
+      const endDate = new Date(end);
 
-  // Клик вне поля ввода бюджета
+      if (
+        !Number.isNaN(startDate.getTime()) &&
+        !Number.isNaN(endDate.getTime()) &&
+        startDate <= endDate
+      ) {
+        updatePeriod(startDate, endDate);
+      }
+    },
+    [updatePeriod],
+  );
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Проверяем клик вне поля бюджета
-      if (budgetInputRef.current && !budgetInputRef.current.contains(event.target as Node)) {
+      if (budgetEditRef.current && !budgetEditRef.current.contains(event.target as Node)) {
         handleBudgetSave();
-      }
-      
-      // Проверяем клик вне поля периода
-      if (periodInputRef.current && !periodInputRef.current.contains(event.target as Node)) {
-        // Проверяем что клик был не на самих инпутах даты
-        const target = event.target as HTMLElement;
-        const isDateInput = target.tagName === 'INPUT' && target.getAttribute('type') === 'date';
-        if (!isDateInput) {
-          handlePeriodSave();
-        }
       }
     };
 
-    if (isEditingBudget || isEditingPeriod) {
+    if (isEditingBudget) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isEditingBudget, isEditingPeriod, tempBudget, tempStartDate, tempEndDate]);
+  }, [handleBudgetSave, isEditingBudget]);
 
-  // Обработчик клика на заголовок бюджета
   const handleBudgetClick = () => {
     if (isEditMode && !isEditingBudget) {
       setIsEditingBudget(true);
@@ -150,222 +137,102 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  // Обработчик клика на период
-  const handlePeriodClick = () => {
-    if (isEditMode && !isEditingPeriod) {
-      setIsEditingPeriod(true);
-    }
-  };
-
   return (
-    <header style={styles.header}>
-      {/* Левый блок: Бюджет */}
-      <Box style={styles.budgetBlock}>
+    <header className={styles.header}>
+      <Box className={styles.budgetBlock}>
         {isEditMode && isEditingBudget ? (
-          // Режим редактирования бюджета
-          <div ref={budgetInputRef} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              ref={budgetInputRef}
-              type="number"
-              value={tempBudget}
-              onChange={(e) => setTempBudget(e.target.value)}
-              onKeyDown={handleBudgetKeyPress}
-              onBlur={handleBudgetBlur}
-              style={{
-                fontSize: hasCompletedItems ? '20px' : '32px',
-                fontWeight: 'normal',
-                color: '#0D0D0D',
-                border: '1px solid #D9D9D9',
-                borderRadius: '5px',
-                padding: '8px 12px',
-                width: '180px',
-                fontFamily: '"Roboto Condensed", sans-serif',
-                backgroundColor: '#FFFFFF',
-              }}
-              min="0"
-              step="1000"
-            />
-            <span style={{ 
-              fontSize: hasCompletedItems ? '20px' : '32px',
-              fontWeight: 'normal',
-              color: '#0D0D0D',
-              fontFamily: '"Roboto Condensed", sans-serif',
-            }}>
-              ₽
+          <div
+            ref={budgetEditRef}
+            className={styles.budgetLine}
+            style={{ fontSize: budgetFontSize, fontWeight: 400, color: budgetTextColor }}
+          >
+            <span
+              className={styles.budgetLabel}
+            >
+              {"Бюджет:\u00A0"}
             </span>
+            <span className={styles.budgetValueWrap}>
+              <span
+                className={styles.budgetSizer}
+              >
+                {tempBudget || "0"}
+              </span>
+              <input
+                ref={budgetInputRef}
+                type="text"
+                inputMode="numeric"
+                value={tempBudget}
+                onChange={(e) =>
+                  setTempBudget(e.target.value.replace(/[^\d]/g, ""))
+                }
+                onKeyDown={handleBudgetKeyPress}
+                onBlur={handleBudgetBlur}
+                className={styles.budgetInput}
+                aria-label="Сумма бюджета"
+              />
+            </span>
+            <span className={styles.currency}>₽</span>
           </div>
         ) : (
-          // Режим просмотра бюджета
           <>
-            <Typography
-              variant="h1"
+            <div
+              className={`${styles.budgetLine} ${styles.budgetText} ${
+                isEditMode ? styles.editableText : ""
+              }`}
               style={{
-                ...styles.budgetText,
-                fontSize: hasCompletedItems ? '20px' : '32px',
-                cursor: isEditMode ? 'pointer' : 'default',
+                fontSize: budgetFontSize,
+                fontWeight: 400,
+                color: budgetTextColor,
               }}
               onClick={handleBudgetClick}
               title={isEditMode ? "Кликните для редактирования бюджета" : ""}
             >
-              Бюджет: {budget.totalIncome.toLocaleString('ru-RU')}₽
-            </Typography>
+              <span className={styles.budgetLabel}>{"Бюджет:\u00A0"}</span>
+              <span className={styles.budgetValueStatic}>{formattedBudget}</span>
+              <span className={styles.currency}>₽</span>
+            </div>
 
-            {hasCompletedItems && (
-              <Typography variant="h1" style={styles.remainingText}>
-                Осталось: {remaining.toLocaleString('ru-RU')}₽
-              </Typography>
-            )}
+            <p
+              className={`${styles.remainingText} ${
+                !hasCompletedItems ? styles.remainingTextHidden : ""
+              }`}
+              style={{ fontSize: "32px", fontWeight: 400 }}
+              aria-hidden={!hasCompletedItems}
+            >
+              {remainingText}
+            </p>
           </>
         )}
       </Box>
 
-      {/* Центральный блок: Период */}
-      <Box style={styles.centerBlock}>
-        {isEditMode && isEditingPeriod ? (
-          // Режим редактирования периода
-          <div ref={periodInputRef} style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px' 
-          }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="date"
-                value={tempStartDate}
-                onChange={(e) => setTempStartDate(e.target.value)}
-                onKeyDown={handlePeriodKeyPress}
-                onBlur={handlePeriodBlur}
-                style={{
-                  fontSize: '16px',
-                  border: '1px solid #D9D9D9',
-                  borderRadius: '5px',
-                  padding: '8px',
-                  fontFamily: '"Roboto Condensed", sans-serif',
-                  backgroundColor: '#FFFFFF',
-                }}
-              />
-              <span style={{ 
-                fontSize: '24px', 
-                display: 'flex', 
-                alignItems: 'center',
-                color: '#0D0D0D',
-                fontFamily: '"Roboto Condensed", sans-serif',
-              }}>
-                –
-              </span>
-              <input
-                type="date"
-                value={tempEndDate}
-                onChange={(e) => setTempEndDate(e.target.value)}
-                onKeyDown={handlePeriodKeyPress}
-                onBlur={handlePeriodBlur}
-                style={{
-                  fontSize: '16px',
-                  border: '1px solid #D9D9D9',
-                  borderRadius: '5px',
-                  padding: '8px',
-                  fontFamily: '"Roboto Condensed", sans-serif',
-                  backgroundColor: '#FFFFFF',
-                }}
-              />
-            </div>
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#5B5B5B',
-              fontFamily: '"Roboto Condensed", sans-serif',
-            }}>
-              Нажмите Enter для сохранения, Esc для отмены
-            </div>
+      <Box className={styles.centerBlock}>
+        {isEditMode ? (
+          <div className={styles.periodPickerWrap}>
+            <DateRangePicker
+              startDate={tempStartDate}
+              endDate={tempEndDate}
+              onChange={handlePeriodChange}
+            />
           </div>
         ) : (
-          // Режим просмотра периода
-          <div 
-            onClick={handlePeriodClick}
-            style={{ 
-              cursor: isEditMode ? 'pointer' : 'default',
-              textAlign: 'center',
-            }}
-            title={isEditMode ? "Кликните для редактирования периода" : ""}
-          >
-            <TimerReminder 
-              startDate={budget.startDate}
-              endDate={budget.endDate}
-            />
-            {/* {isEditMode && (
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#5B5B5B',
-                fontFamily: '"Roboto Condensed", sans-serif',
-                marginTop: '4px',
-              }}>
-                Кликните для изменения дат
-              </div>
-            )} */}
+          <div className={styles.periodDisplay}>
+            <div className={styles.periodDisplayContent}>
+              <TimerReminder
+                startDate={budget.startDate}
+                endDate={budget.endDate}
+              />
+            </div>
+            <div className={styles.periodDisplaySpacer} aria-hidden="true" />
           </div>
         )}
       </Box>
 
-      {/* Правый блок: Переключатель режима */}
-      <Box style={styles.lockBlock}>
+      <Box className={styles.actionsBlock}>
         <LockToggle isLocked={!isEditMode} onToggle={onToggleEditMode} />
+        <ProfileMenu />
       </Box>
     </header>
   );
-};
-
-const styles = {
-  header: {
-    position: "sticky" as const,
-    top: 0,
-    zIndex: 100,
-    background: "transparent",
-    backdropFilter: "blur(10px)",
-    padding: "50px 40px",
-    width: "100%",
-    maxWidth: "1600px",
-    margin: "0 auto",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    flexWrap: "wrap" as const,
-    gap: "16px",
-  },
-  budgetBlock: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "4px",
-    minWidth: "200px",
-  },
-  budgetText: {
-    fontWeight: "normal",
-    color: "#0D0D0D",
-    transition: "font-size 0.3s ease",
-    fontFamily: '"Roboto Condensed", sans-serif',
-    margin: 0,
-    lineHeight: 1.2,
-  },
-  remainingText: {
-    fontSize: "24px",
-    fontWeight: "normal",
-    color: "#0D0D0D",
-    fontFamily: '"Roboto Condensed", sans-serif',
-    margin: 0,
-    lineHeight: 1.2,
-  },
-  centerBlock: {
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    maxWidth: "400px",
-  },
-  lockBlock: {
-    display: "flex",
-    justifyContent: "flex-end",
-    minWidth: "100px",
-  },
 };
 
 export default Header;

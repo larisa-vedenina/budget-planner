@@ -1,0 +1,141 @@
+@use "../../styles/functions" as *;
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: rem(24) rem(16);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.8), transparent 35%),
+    var(--page-background-archive);
+}
+
+.stack {
+  width: min(100%, rem(352));
+  display: flex;
+  flex-direction: column;
+  gap: rem(14);
+}
+
+.createWrap {
+  margin-top: rem(50);
+}
+
+.createButton {
+  width: 100%;
+  min-height: rem(60);
+  height: rem(60);
+  padding: rem(0) rem(20);
+  border: rem(4) solid var(--color-accent-red);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-accent-red);
+  color: var(--color-text-primary);
+  font-size: rem(20);
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.createButton:hover,
+.budgetButton:hover {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.createButton:active,
+.budgetButton:active {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.budgetCard {
+  position: relative;
+}
+
+.budgetCard:hover .deleteButton,
+.budgetCard:focus-within .deleteButton {
+  transform: translate(rem(3), rem(2));
+}
+
+.budgetButton {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: rem(10);
+  min-height: rem(60);
+  height: rem(60);
+  padding: rem(0) rem(68) rem(0) rem(69);
+  border: rem(3) solid var(--card-border, #69b5d3);
+  border-radius: rem(10);
+  background: var(--color-white);
+  box-shadow: var(--button-shadow, var(--shadow-accent-blue));
+  color: var(--color-text-primary);
+  text-align: center;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.budgetRange {
+  margin: 0;
+  font-size: rem(20);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.deleteButton {
+  position: absolute;
+  top: rem(6);
+  right: rem(8);
+  width: rem(34);
+  height: rem(34);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  border-radius: rem(8);
+  background: rgba(255, 255, 255, 0.92);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.deleteButton:hover {
+  transform: translate(rem(3), rem(2));
+  background: var(--color-white);
+}
+
+.deleteIcon {
+  font-size: rem(18);
+  color: var(--color-accent-red);
+}
+
+@media (max-width: 480px) {
+  .createButton,
+  .budgetButton {
+    min-height: rem(60);
+    height: rem(60);
+    padding: rem(0) rem(48) rem(0) rem(50);
+  }
+
+  .budgetRange {
+    font-size: rem(18);
+  }
+
+  .deleteButton {
+    top: rem(5);
+    right: rem(8);
+  }
+}

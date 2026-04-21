@@ -53,8 +53,6 @@ export const StorageService = {
     keysToRemove.forEach(key => {
       this.removeItem(key);
     });
-    
-    console.log(`Удалено ${keysToRemove.length} записей`);
   },
 
   // Получаем размер хранилища

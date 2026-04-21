@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { NoteModel } from '../../../types/note';
-import { Box, Typography } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { NoteModel } from "../../../types/note";
+import { Box } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import styles from "./NoteItem.module.scss";
 
 interface NoteItemProps {
   note: NoteModel;
@@ -21,20 +22,20 @@ export const NoteItem: React.FC<NoteItemProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Обработчик сохранения заметки
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (tempContent.trim() && tempContent !== note.content) {
       onUpdate(note.updateContent(tempContent.trim()));
     }
     setIsEditingContent(false);
-  };
+  }, [note, onUpdate, tempContent]);
 
   // Обработчик нажатия клавиш
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSave();
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       setTempContent(note.content);
       setIsEditingContent(false);
     }
@@ -60,28 +61,19 @@ export const NoteItem: React.FC<NoteItemProps> = ({
     };
 
     if (isEditingContent) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingContent, tempContent]);
+  }, [handleSave, isEditingContent]);
 
   return (
     <Box
-      sx={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '10px',
-        padding: '12px',
-        marginBottom: '10px',
-        position: 'relative',
-        border: '2px solid #ffffff',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: isEditing ? '-2px 2px 1px rgba(0, 0, 0, 0.25)' : 'none',
-        },
-      }}
+      className={`note-item ${styles.noteItem} ${
+        isEditing ? styles.noteItemEditable : ""
+      }`}
     >
       {isEditing && isEditingContent ? (
         <textarea
@@ -90,95 +82,34 @@ export const NoteItem: React.FC<NoteItemProps> = ({
           onChange={(e) => setTempContent(e.target.value)}
           onKeyDown={handleKeyPress}
           onBlur={handleSave}
-          style={{
-            width: '100%',
-            minHeight: '80px',
-            border: 'none',
-            borderRadius: '5px',
-            padding: '8px',
-            fontSize: '18px',
-            fontFamily: '"Roboto Condensed", sans-serif',
-            color: '#0D0D0D',
-            backgroundColor: '#FFFFFF',
-            resize: 'vertical',
-          }}
+          className={styles.textarea}
           placeholder="Введите текст заметки..."
         />
       ) : (
         <Box
           onClick={() => isEditing && setIsEditingContent(true)}
-          sx={{
-            minHeight: '60px',
-            cursor: isEditing ? 'text' : 'default',
-          }}
+          className={`${styles.content} ${
+            isEditing ? styles.contentEditable : ""
+          }`}
         >
-          <Typography
-            sx={{
-              fontSize: '18px',
-              color: '#0D0D0D',
-              fontFamily: '"Roboto Condensed", sans-serif',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {note.content}
-          </Typography>
+          <div className={styles.text}>{note.content}</div>
         </Box>
       )}
 
       {/* Подпись заметки */}
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: '4px',
-          right: '8px',
-        }}
-      >
-        <Typography
-          sx={{
-            fontSize: '12px',
-            color: '#5B5B5B',
-            fontFamily: '"Roboto Condensed", sans-serif',
-            opacity: 0.7,
-          }}
-        >
-          {note.getSignature()}
-        </Typography>
+      <Box className={styles.signature}>
+        <div className={styles.signatureText}>{note.getSignature()}</div>
       </Box>
 
       {/* Кнопка удаления (только в режиме редактирования) */}
       {isEditing && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '8px',
-            right: '8px',
-          }}
-        >
+        <Box className={styles.deleteWrap}>
           <Box
             onClick={() => onDelete(note.id)}
-            sx={{
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: 'transparent',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                backgroundColor: '#FFCCCC',
-              },
-            }}
+            className={styles.deleteButton}
             title="Удалить заметку"
           >
-            <DeleteIcon
-              sx={{
-                color: '#D87B7B',
-                fontSize: '16px',
-              }}
-            />
+            <DeleteIcon className={styles.deleteIcon} />
           </Box>
         </Box>
       )}

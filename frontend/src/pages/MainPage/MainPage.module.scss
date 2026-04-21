@@ -1,0 +1,89 @@
+@use "../../styles/functions" as *;
+
+.page {
+  min-height: 100vh;
+  background: var(--page-background-main);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 rem(32);
+}
+
+@media (max-width: 599px) {
+  .content {
+    padding: 0 rem(8) rem(24);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .content {
+    padding: 0 rem(16) rem(28);
+  }
+}
+
+@media (min-width: 900px) {
+  .content {
+    padding: 0 rem(24) rem(32);
+  }
+}
+
+.emptyState {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: rem(16);
+  padding: rem(32) rem(16);
+  background: var(--page-background-main);
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: rem(30);
+  font-weight: 500;
+}
+
+.emptyActions {
+  display: flex;
+  flex-direction: column;
+  gap: rem(12);
+  width: min(100%, rem(342));
+}
+
+.primaryAction,
+.secondaryAction {
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.primaryAction:hover,
+.secondaryAction:hover {
+  transform: translate(-rem(1), rem(1));
+  box-shadow: var(--shadow-card-hover);
+}
+
+.primaryAction {
+  min-height: rem(63);
+  padding: rem(14) rem(20);
+  border: rem(4) solid var(--color-accent-red);
+  box-shadow: var(--shadow-card);
+  font-size: rem(18);
+}
+
+.secondaryAction {
+  min-height: rem(44);
+  padding: rem(10) rem(16);
+  border: rem(2) solid var(--color-accent-red);
+  background: var(--color-surface-soft-pink);
+  font-size: rem(14);
+}

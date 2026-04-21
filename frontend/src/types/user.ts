@@ -5,7 +5,10 @@
  */
 export interface User {
   id: string;           // Уникальный ID пользователя
-  email: string;        // Email для входа
+  login: string;        // Логин для входа
+  phone: string;        // Телефон пользователя
+  email?: string;       // Email пользователя
+  avatarUrl?: string;   // Аватар пользователя
   name: string;         // Имя пользователя
   createdAt: Date;      // Дата регистрации
   lastLogin?: Date;     // Дата последнего входа

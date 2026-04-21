@@ -1,0 +1,132 @@
+@use "../../../styles/functions" as *;
+
+.wrapper {
+  position: relative;
+}
+
+.fileInput {
+  display: none;
+}
+
+.avatarButton,
+.loginButton {
+  min-height: rem(52);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: rem(3) solid var(--button-border, var(--color-accent-blue));
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-accent-blue);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.avatarButton:hover,
+.loginButton:hover,
+.avatarButton:focus-visible,
+.loginButton:focus-visible,
+.menuButton:hover,
+.menuButton:focus-visible {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.avatarButton {
+  width: rem(52);
+  min-width: rem(52);
+  overflow: hidden;
+  border-radius: 50%;
+  border-color: var(--color-accent-blue);
+}
+
+.loginButton {
+  padding: rem(12) rem(20);
+  border-color: var(--color-accent-blue);
+  font-size: rem(16);
+  font-weight: 400;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarFallback {
+  font-size: rem(20);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + #{rem(12)});
+  right: 0;
+  width: min(rem(280), calc(100vw - #{rem(24)}));
+  padding: rem(16);
+  border: rem(3) solid var(--color-accent-blue);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-accent-blue);
+  z-index: 120;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: rem(4);
+  padding-bottom: rem(12);
+  margin-bottom: rem(12);
+  border-bottom: rem(1) solid var(--color-border);
+  text-align: center;
+}
+
+.profileLogin {
+  font-size: rem(16);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+}
+
+.profilePhone {
+  font-size: rem(16);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.menuActions {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+}
+
+.menuButton {
+  width: 100%;
+  min-height: rem(44);
+  padding: rem(10) rem(12);
+  text-align: center;
+  border: rem(3) solid var(--color-accent-blue);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: rem(16);
+  font-weight: 400;
+  box-shadow: var(--shadow-accent-blue);
+}
+
+@media (max-width: 768px) {
+  .menu {
+    right: 0;
+    width: min(rem(260), calc(100vw - #{rem(24)}));
+  }
+
+  .loginButton {
+    font-size: rem(16);
+  }
+}

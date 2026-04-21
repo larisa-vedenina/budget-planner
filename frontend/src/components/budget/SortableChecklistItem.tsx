@@ -30,6 +30,7 @@ export const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -45,40 +46,35 @@ export const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    cursor: isEditing && !item.completed ? "grab" : "default",
-    marginBottom: "10px",
+    width: "100%",
+    transform: transform ? CSS.Translate.toString(transform) : undefined,
+    transition:
+      transition ??
+      "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+    cursor: "default",
+    zIndex: transform ? 1 : "auto",
+    willChange: transform ? "transform" : "auto",
+    boxShadow: isDragging ? "none" : undefined,
   };
 
-  const itemWithDragState = isDragging
-    ? item.updateDragState("dragging")
-    : item.updateDragState("idle");
-
   return (
-    <Box // Используем Box вместо div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      sx={{
-        '&:hover': {
-          '& .checklist-item': {
-            boxShadow: isEditing && !item.completed && !isDragging 
-              ? "-1px 1px 0.5px rgba(0, 0, 0, 0.25)" 
-              : "none",
-          }
-        }
-      }}
-    >
+    <Box ref={setNodeRef} style={style}>
       <ChecklistItem
-        item={itemWithDragState}
+        item={item}
         isEditing={isEditing}
         onUpdate={onUpdate}
         onDelete={onDelete}
         onToggle={onToggle}
         backgroundColor={backgroundColor}
+        dragHandleProps={
+          isEditing && !item.completed
+            ? {
+                ref: setActivatorNodeRef,
+                attributes,
+                listeners,
+              }
+            : undefined
+        }
       />
     </Box>
   );

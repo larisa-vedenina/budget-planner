@@ -1,12 +1,9 @@
-import React, { useMemo } from "react";
-import {
-  BudgetPeriod,
-  CellColor,
-  calculateActiveExpenses,
-} from "../../../types/budget";
+import React, { useCallback, useMemo, useState } from "react";
+import { BudgetPeriod, calculateActiveExpenses } from "../../../types/budget";
 import BudgetCard from "../../budget/BudgetCard/BudgetCard";
 import { ChecklistItemModel } from "../../../types/checklist-item";
 import { NoteModel } from "../../../types/note";
+import styles from "./BudgetGrid.module.scss";
 
 interface BudgetGridProps {
   budget: BudgetPeriod;
@@ -57,44 +54,81 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
   onReorderItems = () => {},
   onMoveItem = () => {},
 }) => {
-  // ФУНКЦИЯ ФИЛЬТРАЦИИ И СОРТИРОВКИ
-  const getFilteredItems = (items: ChecklistItemModel[]) => {
-    if (!items || items.length === 0) return [];
+  const [delayedCompletedCounts, setDelayedCompletedCounts] = useState({
+    required: 0,
+    desired: 0,
+  });
 
-    // Разделяем на активные и выполненные
-    const activeItems = items.filter((item) => !item.completed);
-    const completedItems = items.filter((item) => item.completed);
-
-    // Сортируем активные по порядку: приоритетные → старые → новые
-    const sortedActive = [...activeItems].sort((a, b) => {
-      // 1. Приоритетные всегда сверху
-      if (a.priority === "priority" && b.priority !== "priority") return -1;
-      if (a.priority !== "priority" && b.priority === "priority") return 1;
-
-      // 2. Старые выше новых (по дате создания - чем старше, тем выше)
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-
-    // Сортируем выполненные: самые свежие сверху
-    const sortedCompleted = [...completedItems].sort(
-      (a, b) =>
-        new Date(b.completedAt || 0).getTime() -
-        new Date(a.completedAt || 0).getTime(),
+  const handleRequiredDelayedCompletedChange = useCallback((count: number) => {
+    setDelayedCompletedCounts((currentCounts) =>
+      currentCounts.required === count
+        ? currentCounts
+        : {
+            ...currentCounts,
+            required: count,
+          },
     );
+  }, []);
 
-    // Объединяем: активные + выполненные
-    return [...sortedActive, ...sortedCompleted];
-  };
+  const handleDesiredDelayedCompletedChange = useCallback((count: number) => {
+    setDelayedCompletedCounts((currentCounts) =>
+      currentCounts.desired === count
+        ? currentCounts
+        : {
+            ...currentCounts,
+            desired: count,
+          },
+    );
+  }, []);
+
+  const desiredTitle =
+    budget.cellTitles.desired.trim().toUpperCase() === "ЖЕЛАЕМЫЕ"
+      ? "НЕОБЯЗАТЕЛЬНЫЕ"
+      : budget.cellTitles.desired;
+
+  // ФУНКЦИЯ ФИЛЬТРАЦИИ И СОРТИРОВКИ
+  const getFilteredItems = useCallback(
+    (items: ChecklistItemModel[]) => {
+      if (!items || items.length === 0) return [];
+
+      // Разделяем на активные и выполненные
+      const activeItems = items.filter((item) => !item.completed);
+      const completedItems = items.filter((item) => item.completed);
+
+      // В режиме редактирования сохраняем ручной порядок, чтобы drag and drop был предсказуемым.
+      const sortedActive = isEditMode
+        ? activeItems
+        : [...activeItems].sort((a, b) => {
+            if (a.priority === "priority" && b.priority !== "priority") return -1;
+            if (a.priority !== "priority" && b.priority === "priority") return 1;
+
+            return (
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          });
+
+      // Сортируем выполненные: самые свежие сверху
+      const sortedCompleted = [...completedItems].sort(
+        (a, b) =>
+          new Date(b.completedAt || 0).getTime() -
+          new Date(a.completedAt || 0).getTime(),
+      );
+
+      // Объединяем: активные + выполненные
+      return [...sortedActive, ...sortedCompleted];
+    },
+    [isEditMode],
+  );
 
   // Используем useMemo для оптимизации
   const filteredRequiredItems = useMemo(
     () => getFilteredItems(budget.requiredItems),
-    [budget.requiredItems],
+    [budget.requiredItems, getFilteredItems],
   );
 
   const filteredDesiredItems = useMemo(
     () => getFilteredItems(budget.desiredItems),
-    [budget.desiredItems],
+    [budget.desiredItems, getFilteredItems],
   );
 
   // Рассчитываем суммы активных расходов (только невыполненных)
@@ -115,42 +149,54 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
   );
 
   // Рассчитываем высоты ячеек на основе контента
-  const calculateCellHeight = (items: ChecklistItemModel[]): number => {
-    // Минимальная высота ячейки
-    const MIN_HEIGHT = 350;
+  const calculateCellHeight = useCallback(
+    (items: ChecklistItemModel[], delayedCompletedCount = 0): number => {
+      // Минимальная высота ячейки
+      const MIN_HEIGHT = 350;
 
-    // Высота фиксированных элементов
-    const HEADER_HEIGHT = 80;
-    const ITEM_HEIGHT = 85; 
-    const ADD_BUTTON_HEIGHT = isEditMode ? 80 : 0;
+      // Эти значения синхронизированы с фактической вертикальной геометрией карточки.
+      const HEADER_HEIGHT = 80;
+      const ITEM_HEIGHT = 80;
+      const ADD_BUTTON_HEIGHT = isEditMode ? 80 : 0;
 
-    // Активные пункты
-    const activeItems = items.filter((item) => !item.completed);
+      // Активные пункты
+      const activeItems = items.filter((item) => !item.completed);
+      const completedCount = items.filter((item) => item.completed).length;
+      const visibleCompletedCount = isEditMode
+        ? Math.min(Math.max(completedCount - delayedCompletedCount, 0), 2)
+        : 0;
 
-    // В режиме редактирования показываем максимум 2 выполненных
-    const visibleCompletedCount = isEditMode
-      ? Math.min(2, items.filter((item) => item.completed).length)
-      : 0;
+      // Пока отмеченный пункт еще виден в активном списке, держим для него столько же места,
+      // сколько реально осталось временно показанных пунктов.
+      const delayedCompletedBuffer = delayedCompletedCount;
 
-    // Высота видимой части
-    const visibleHeight =
-      HEADER_HEIGHT +
-      activeItems.length * ITEM_HEIGHT +
-      ADD_BUTTON_HEIGHT +
-      visibleCompletedCount * ITEM_HEIGHT +
-      40; // дополнительные отступы
+      // Высота видимой части
+      const visibleHeight =
+        HEADER_HEIGHT +
+        activeItems.length * ITEM_HEIGHT +
+        ADD_BUTTON_HEIGHT +
+        visibleCompletedCount * ITEM_HEIGHT +
+        delayedCompletedBuffer * ITEM_HEIGHT +
+        40;
 
-    return Math.max(visibleHeight, MIN_HEIGHT);
-  };
+      return Math.max(visibleHeight, MIN_HEIGHT);
+    },
+    [isEditMode],
+  );
 
   const requiredHeight = useMemo(
-    () => calculateCellHeight(filteredRequiredItems),
-    [filteredRequiredItems, isEditMode],
+    () =>
+      calculateCellHeight(
+        filteredRequiredItems,
+        delayedCompletedCounts.required,
+      ),
+    [calculateCellHeight, delayedCompletedCounts.required, filteredRequiredItems],
   );
 
   const desiredHeight = useMemo(
-    () => calculateCellHeight(filteredDesiredItems),
-    [filteredDesiredItems, isEditMode],
+    () =>
+      calculateCellHeight(filteredDesiredItems, delayedCompletedCounts.desired),
+    [calculateCellHeight, delayedCompletedCounts.desired, filteredDesiredItems],
   );
 
   // Высота для второй колонки = сумма высот двух ячеек первой колонки
@@ -164,7 +210,8 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
   ) => {
     const items =
       category === "required" ? filteredRequiredItems : filteredDesiredItems;
-    const oldIndex = items.findIndex((item) => item.id === itemId);
+    const activeItems = items.filter((item) => !item.completed);
+    const oldIndex = activeItems.findIndex((item) => item.id === itemId);
 
     if (oldIndex !== -1 && oldIndex !== newIndex) {
       onReorderItems?.(category, oldIndex, newIndex);
@@ -179,33 +226,21 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "1600px",
-        margin: "0 auto",
-        padding: "20px",
-        minHeight: "700px",
-      }}
-    >
+    <div className={styles.wrapper}>
       <div
+        className={styles.grid}
         style={{
-          display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gridTemplateRows: `${requiredHeight}px ${desiredHeight}px`,
-          gap: "20px",
-          height: "100%",
-          minHeight: "700px",
         }}
       >
         {/* Обязательные расходы */}
         <div
+          className={styles.cell}
           style={{
             gridColumn: "1 / 2",
             gridRow: "1 / 2",
             height: `${requiredHeight}px`,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
           <BudgetCard
@@ -228,21 +263,21 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
             onItemDragEnd={(itemId: string, newIndex: number) =>
               handleItemDragEnd(itemId, "required", newIndex)
             }
+            onDelayedCompletedCountChange={handleRequiredDelayedCompletedChange}
           />
         </div>
 
-        {/* Желаемые расходы */}
+        {/* Необязательные расходы */}
         <div
+          className={styles.cell}
           style={{
             gridColumn: "1 / 2",
             gridRow: "2 / 3",
             height: `${desiredHeight}px`,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
           <BudgetCard
-            cellTitle={budget.cellTitles.desired}
+            cellTitle={desiredTitle}
             amount={desiredActiveAmount}
             items={filteredDesiredItems}
             backgroundColor={budget.colors.desired}
@@ -261,17 +296,17 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
             onItemDragEnd={(itemId: string, newIndex: number) =>
               handleItemDragEnd(itemId, "desired", newIndex)
             }
+            onDelayedCompletedCountChange={handleDesiredDelayedCompletedChange}
           />
         </div>
 
         {/* Заметки - фиксированная высота = сумма высот двух ячеек */}
         <div
+          className={styles.cell}
           style={{
             gridColumn: "2 / 3",
             gridRow: "1 / 3",
             height: `${notesColumnHeight}px`,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
           <BudgetCard

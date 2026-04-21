@@ -1,5 +1,6 @@
 // Анимированный чекбокс
 import React from "react";
+import styles from "./AnimatedCheckbox.module.scss";
 
 interface AnimatedCheckboxProps {
   checked: boolean;
@@ -15,31 +16,14 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   return (
     <div
       onClick={onChange}
-      style={{
-        width: "24px",
-        height: "24px",
-        border: checked ? "none" : "1px solid #D9D9D9",
-        borderRadius: "5px",
-        boxShadow: checked ? "none" : "-1px 1px 0.5px rgba(0, 0, 0, 0.25)",
-        transform: checked ? "translate(-1px, 1px)" : "none",
-        backgroundColor: checked ? backgroundColor : "#FFFFFF", // Используем здесь
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "all 0.2s ease",
-      }}
+      className={`${styles.checkbox} ${checked ? styles.checked : ""}`}
+      style={
+        {
+          "--checkbox-color": backgroundColor,
+        } as React.CSSProperties
+      }
     >
-      {checked && (
-        <div
-          style={{
-            width: "12px",
-            height: "12px",
-            borderRadius: "50%",
-            backgroundColor: backgroundColor, // Цвет фона ячейки
-          }}
-        />
-      )}
+      {checked && <div className={styles.dot} />}
     </div>
   );
 };

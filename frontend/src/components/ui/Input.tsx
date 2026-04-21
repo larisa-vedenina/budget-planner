@@ -1,4 +1,5 @@
 import React, { InputHTMLAttributes } from 'react';
+import styles from "./Input.module.scss";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
@@ -7,15 +8,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input: React.FC<InputProps> = ({ error, style, ...props }) => {
   return (
     <input
-      style={{
-        border: `1px solid ${error ? '#D87B7B' : '#D9D9D9'}`,
-        borderRadius: '5px',
-        padding: '10px',
-        fontSize: '16px',
-        fontFamily: 'Roboto Condensed, sans-serif',
-        width: '100%',
-        ...style,
-      }}
+      className={`${styles.input} ${error ? styles.error : ""}`}
+      style={style}
       {...props}
     />
   );

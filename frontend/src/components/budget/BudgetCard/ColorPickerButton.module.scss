@@ -1,0 +1,42 @@
+@use "../../../styles/functions" as *;
+
+.trigger {
+  width: rem(24);
+  height: rem(24);
+  border-radius: 50%;
+  background: var(--picker-current-color, var(--color-white));
+  border: rem(2) solid #f9f9f9;
+  cursor: pointer;
+  position: absolute;
+  bottom: rem(12);
+  left: rem(12);
+  box-shadow: rem(1) rem(1) rem(0.5) rgba(0, 0, 0, 0.2);
+}
+
+.palette {
+  padding: rem(16);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: rem(8);
+  background: var(--color-white);
+  border-radius: rem(8);
+  box-shadow: rem(2) rem(2) rem(1) rgba(0, 0, 0, 0.15);
+}
+
+.swatch {
+  width: rem(32);
+  height: rem(32);
+  border-radius: 50%;
+  background: var(--picker-color, var(--color-white));
+  border: rem(1) solid var(--color-border);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.swatch:hover {
+  transform: scale(1.1);
+}
+
+.swatchActive {
+  border: rem(2) solid var(--color-text-primary);
+}

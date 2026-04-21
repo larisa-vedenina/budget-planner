@@ -1,262 +1,386 @@
 import { createTheme } from "@mui/material/styles";
 import type { TypographyVariantsOptions } from "@mui/material/styles";
+import { pxToRem } from "./units";
 
-// Основные цвета из твоего дизайна
-const colors = {
-  backgrounds: {
-    blue: "#69B5D3",
-    green: "#507B5D",
-    red: "#D87B7B",
-    yellow: "#FCD688",
-    lightPink: "#FFDFDF",
-    lightBlue: "#CAEEFC",
-    lightYellow: "#FFE8B9",
-    lightGreen: "#ABD0B7",
-    lightWhite: "#FDF7F7",
-    gray: "#D9D9D9",
-    darkGray: "#5B5B5B",
+const accentColors = {
+  blue: {
+    strong: "#69B5D3",
+    soft: "#CAEEFC",
+    shadowBase: "#185C77",
+    contrastText: "#FFFFFF",
   },
-  text: {
-    dark: "#0D0D0D",
-    medium: "#5B5B5B",
-    light: "#FFFFFF",
-    lightAccent: "#FFDFDF",
+  green: {
+    strong: "#507B5D",
+    soft: "#ABD0B7",
+    shadowBase: "#12341C",
+    contrastText: "#FFFFFF",
   },
-  accents: {
-    red: "#D87B7B",
-    blue: "#69B5D3",
-    green: "#507B5D",
+  yellow: {
+    strong: "#FCD688",
+    soft: "#FFE8B9",
+    shadowBase: "#C29231",
+    contrastText: "#FFFFFF",
   },
-  neutral: {
-    white: "#FFFFFF",
-    gray100: "#FDF7F7",
-    gray200: "#FFDFDF",
-    gray300: "#D9D9D9",
-    gray400: "#5B5B5B",
-    gray500: "#0D0D0D",
+  red: {
+    strong: "#D87B7B",
+    soft: "#FFDFDF",
+    shadowBase: "#AB1D1D",
+    contrastText: "#FFFFFF",
   },
-  status: {
-    success: "#507B5D",
-    warning: "#FCD688",
-    error: "#D87B7B",
-    info: "#69B5D3",
-  },
+} as const;
+
+const surfaceColors = {
+  white: "#FFFFFF",
+  blueStrong: accentColors.blue.strong,
+  blueSoft: accentColors.blue.soft,
+  greenStrong: accentColors.green.strong,
+  greenSoft: accentColors.green.soft,
+  yellowStrong: accentColors.yellow.strong,
+  yellowSoft: accentColors.yellow.soft,
+  redStrong: accentColors.red.strong,
+  redSoft: accentColors.red.soft,
+} as const;
+
+const pageBackgrounds = {
+  default: surfaceColors.white,
+  start: accentColors.blue.soft,
+  main: surfaceColors.white,
+  login: accentColors.yellow.soft,
+  form: accentColors.red.soft,
+  archive: accentColors.blue.soft,
+} as const;
+
+const textColors = {
+  primary: "#0D0D0D",
+  secondary: "#5B5B5B",
+  inverse: "#FFFFFF",
+  warning: "#D87B7B",
+} as const;
+
+const borderColors = {
+  neutral: "#D9D9D9",
+} as const;
+
+const borderWidths = {
+  button: 3,
+  item: 2,
+  input: 2,
+  checkbox: 1,
+} as const;
+
+const radii = {
+  sm: 5,
+  md: 10,
+  pill: 999,
+} as const;
+
+const fontSizes = {
+  detail: 16,
+  base: 24,
+  display: 32,
+} as const;
+
+const motion = {
+  fast: "0.2s ease",
+} as const;
+
+const normalizeHex = (value: string): string => value.trim().toUpperCase();
+
+const hexToRgbChannels = (hex: string): string => {
+  const normalized = normalizeHex(hex).replace("#", "");
+  const fullHex =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((symbol) => `${symbol}${symbol}`)
+          .join("")
+      : normalized;
+
+  const red = Number.parseInt(fullHex.slice(0, 2), 16);
+  const green = Number.parseInt(fullHex.slice(2, 4), 16);
+  const blue = Number.parseInt(fullHex.slice(4, 6), 16);
+
+  return `${red}, ${green}, ${blue}`;
 };
 
-// Типографика
+const withAlpha = (hex: string, opacity: number): string =>
+  `rgba(${hexToRgbChannels(hex)}, ${opacity})`;
+
+const createShadow = (
+  x: number,
+  y: number,
+  blur: number,
+  color: string,
+  opacity: number,
+): string =>
+  `${pxToRem(x)} ${pxToRem(y)} ${pxToRem(blur)} ${withAlpha(color, opacity)}`;
+
+const shadowTokens = {
+  accentBlue: createShadow(3, 2, 0.5, accentColors.blue.shadowBase, 0.7),
+  accentGreen: createShadow(3, 2, 0.5, accentColors.green.shadowBase, 0.7),
+  accentYellow: createShadow(3, 2, 0.5, accentColors.yellow.shadowBase, 0.7),
+  accentRed: createShadow(3, 2, 0.5, accentColors.red.shadowBase, 0.7),
+  surfaceBlueSoft: createShadow(3, 2, 0.5, accentColors.blue.strong, 0.7),
+  surfaceGreenSoft: createShadow(3, 2, 0.5, accentColors.green.strong, 0.7),
+  surfaceYellowSoft: createShadow(3, 2, 0.5, accentColors.yellow.strong, 0.7),
+  surfaceRedSoft: createShadow(3, 2, 0.5, accentColors.red.strong, 0.7),
+  neutralRead: createShadow(-2, 2, 0.5, textColors.secondary, 0.4),
+  neutralEdit: createShadow(3, 2, 0.5, textColors.secondary, 0.4),
+  none: "none",
+} as const;
+
+const radiusTokens = {
+  sm: pxToRem(radii.sm),
+  md: pxToRem(radii.md),
+  pill: pxToRem(radii.pill),
+} as const;
+
+const accentShadowVariables = {
+  blue: "var(--shadow-accent-blue)",
+  green: "var(--shadow-accent-green)",
+  yellow: "var(--shadow-accent-yellow)",
+  red: "var(--shadow-accent-red)",
+} as const;
+
+const surfaceShadowVariables = {
+  blueStrong: "var(--shadow-accent-blue)",
+  blueSoft: "var(--shadow-surface-blue-soft)",
+  greenStrong: "var(--shadow-accent-green)",
+  greenSoft: "var(--shadow-surface-green-soft)",
+  yellowStrong: "var(--shadow-accent-yellow)",
+  yellowSoft: "var(--shadow-surface-yellow-soft)",
+  redStrong: "var(--shadow-accent-red)",
+  redSoft: "var(--shadow-surface-red-soft)",
+} as const;
+
+const accentFamilyByHex: Record<string, keyof typeof accentShadowVariables> = {
+  "#69B5D3": "blue",
+  "#CAEEFC": "blue",
+  "#507B5D": "green",
+  "#ABD0B7": "green",
+  "#FCD688": "yellow",
+  "#FFE8B9": "yellow",
+  "#D87B7B": "red",
+  "#FFDFDF": "red",
+};
+
+export const getAccentShadowVariable = (color: string): string => {
+  const family = accentFamilyByHex[normalizeHex(color)] ?? "blue";
+  return accentShadowVariables[family];
+};
+
+const surfaceShadowByHex: Record<string, string> = {
+  "#69B5D3": surfaceShadowVariables.blueStrong,
+  "#CAEEFC": surfaceShadowVariables.blueSoft,
+  "#507B5D": surfaceShadowVariables.greenStrong,
+  "#ABD0B7": surfaceShadowVariables.greenSoft,
+  "#FCD688": surfaceShadowVariables.yellowStrong,
+  "#FFE8B9": surfaceShadowVariables.yellowSoft,
+  "#D87B7B": surfaceShadowVariables.redStrong,
+  "#FFDFDF": surfaceShadowVariables.redSoft,
+};
+
+export const getSurfaceShadowVariable = (color: string): string =>
+  surfaceShadowByHex[normalizeHex(color)] ?? "var(--shadow-neutral-edit)";
+
 const typography: TypographyVariantsOptions = {
   fontFamily:
     "'Roboto Condensed', -apple-system, BlinkMacSystemFont, sans-serif",
-  // большой заголок
   h1: {
-    fontSize: "1.5rem",
+    fontSize: pxToRem(fontSizes.display),
     fontWeight: 500,
-    lineHeight: 1.4,
+    lineHeight: 1.2,
     letterSpacing: "0.01em",
-    textTransform: "uppercase" as const,
   },
   h2: {
-    // Основной шрифт заголовков
-    fontSize: "1.25rem",
-    fontWeight: 400,
-    lineHeight: 1.4,
+    fontSize: pxToRem(fontSizes.base),
+    fontWeight: 500,
+    lineHeight: 1.2,
     letterSpacing: "0.01em",
   },
   h3: {
-    // подписи
-    fontSize: "1.125rem",
-    fontWeight: 500,
-    lineHeight: 1.4,
-    letterSpacing: "0",
-    textTransform: "lowercase" as const,
-  },
-
-  // ТЕЛО ТЕКСТА
-  body1: {
-    // Основной текст в инпутах, параграфы
-    fontSize: "1.25rem",
-    lineHeight: 1.5,
+    fontSize: pxToRem(fontSizes.base),
     fontWeight: 400,
+    lineHeight: 1.2,
+    letterSpacing: "0.01em",
+  },
+  body1: {
+    fontSize: pxToRem(fontSizes.base),
+    fontWeight: 400,
+    lineHeight: 1.35,
     letterSpacing: "0.01em",
   },
   body2: {
-    // Второстепенный текст, подписи
-    fontSize: "0.875rem",
+    fontSize: pxToRem(fontSizes.detail),
+    fontWeight: 400,
     lineHeight: 1.5,
-    fontWeight: 300,
-    letterSpacing: "0.02em",
-    color: colors.text.medium, // автоматически серый
+    letterSpacing: "0.01em",
+    color: textColors.secondary,
   },
-
-  // СПЕЦИАЛЬНЫЕ ВАРИАНТЫ
   subtitle1: {
-    // Пункты чек-листа (body1 но жирнее)
-    fontSize: "1rem",
-    lineHeight: 1.5,
+    fontSize: pxToRem(fontSizes.base),
     fontWeight: 500,
+    lineHeight: 1.35,
     letterSpacing: "0.01em",
   },
   subtitle2: {
-    // Суммы в чек-листе
-    fontSize: "1rem",
-    lineHeight: 1.5,
+    fontSize: pxToRem(fontSizes.base),
     fontWeight: 400,
+    lineHeight: 1.35,
     letterSpacing: "0",
   },
   caption: {
-    // Самый мелкий текст, метки
-    fontSize: "0.75rem",
+    fontSize: pxToRem(fontSizes.detail),
+    fontWeight: 400,
     lineHeight: 1.4,
-    fontWeight: 300,
-    letterSpacing: "0.03em",
-    textTransform: "uppercase" as const,
+    letterSpacing: "0.01em",
+    color: textColors.secondary,
   },
-
-  // КНОПКИ
   button: {
-    fontSize: "1rem",
-    fontWeight: 500,
+    fontSize: pxToRem(fontSizes.base),
+    fontWeight: 400,
+    lineHeight: 1.15,
     textTransform: "none" as const,
-    letterSpacing: "0.02em",
+    letterSpacing: "0.01em",
   },
 };
 
-// Тени
-const shadows = {
-  small: "0px 2px 2px rgba(0, 0, 0, 0.25)",
-  medium: "0px 4px 8px rgba(0, 0, 0, 0.3)",
-  large: "0px 8px 16px rgba(0, 0, 0, 0.35)",
-  inner: "inset -2px 1px 1.1px rgba(0, 0, 0, 0.25)",
+export const cssVariables: Record<string, string> = {
+  "--surface-white": surfaceColors.white,
+  "--surface-blue": surfaceColors.blueStrong,
+  "--surface-blue-soft": surfaceColors.blueSoft,
+  "--surface-green": surfaceColors.greenStrong,
+  "--surface-green-soft": surfaceColors.greenSoft,
+  "--surface-yellow": surfaceColors.yellowStrong,
+  "--surface-yellow-soft": surfaceColors.yellowSoft,
+  "--surface-red": surfaceColors.redStrong,
+  "--surface-red-soft": surfaceColors.redSoft,
+
+  "--page-background-default": pageBackgrounds.default,
+  "--page-background-start": pageBackgrounds.start,
+  "--page-background-main": pageBackgrounds.main,
+  "--page-background-login": pageBackgrounds.login,
+  "--page-background-form": pageBackgrounds.form,
+  "--page-background-archive": pageBackgrounds.archive,
+
+  "--accent-blue": accentColors.blue.strong,
+  "--accent-blue-soft": accentColors.blue.soft,
+  "--accent-green": accentColors.green.strong,
+  "--accent-green-soft": accentColors.green.soft,
+  "--accent-yellow": accentColors.yellow.strong,
+  "--accent-yellow-soft": accentColors.yellow.soft,
+  "--accent-red": accentColors.red.strong,
+  "--accent-red-soft": accentColors.red.soft,
+
+  "--text-primary": textColors.primary,
+  "--text-secondary": textColors.secondary,
+  "--text-inverse": textColors.inverse,
+  "--text-warning": textColors.warning,
+
+  "--border-neutral": borderColors.neutral,
+  "--border-width-button": pxToRem(borderWidths.button),
+  "--border-width-item": pxToRem(borderWidths.item),
+  "--border-width-input": pxToRem(borderWidths.input),
+  "--border-width-checkbox": pxToRem(borderWidths.checkbox),
+
+  "--shadow-accent-blue": shadowTokens.accentBlue,
+  "--shadow-accent-green": shadowTokens.accentGreen,
+  "--shadow-accent-yellow": shadowTokens.accentYellow,
+  "--shadow-accent-red": shadowTokens.accentRed,
+  "--shadow-surface-blue-soft": shadowTokens.surfaceBlueSoft,
+  "--shadow-surface-green-soft": shadowTokens.surfaceGreenSoft,
+  "--shadow-surface-yellow-soft": shadowTokens.surfaceYellowSoft,
+  "--shadow-surface-red-soft": shadowTokens.surfaceRedSoft,
+  "--shadow-neutral-read": shadowTokens.neutralRead,
+  "--shadow-neutral-edit": shadowTokens.neutralEdit,
+
+  "--radius-sm": radiusTokens.sm,
+  "--radius-md": radiusTokens.md,
+  "--radius-pill": radiusTokens.pill,
+  "--transition-fast": motion.fast,
+
+  // Backward-compatible aliases for existing styles
+  "--color-white": surfaceColors.white,
+  "--color-surface-muted": surfaceColors.white,
+  "--color-surface-soft-blue": accentColors.blue.soft,
+  "--color-surface-soft-green": accentColors.green.soft,
+  "--color-surface-soft-yellow": accentColors.yellow.soft,
+  "--color-surface-soft-pink": accentColors.red.soft,
+  "--color-accent-blue": accentColors.blue.strong,
+  "--color-accent-green": accentColors.green.strong,
+  "--color-accent-yellow": accentColors.yellow.strong,
+  "--color-accent-red": accentColors.red.strong,
+  "--color-text-primary": textColors.primary,
+  "--color-text-secondary": textColors.secondary,
+  "--color-text-warning": textColors.warning,
+  "--color-border": borderColors.neutral,
+  "--shadow-card": shadowTokens.neutralEdit,
+  "--shadow-card-hover": shadowTokens.neutralEdit,
+  "--shadow-inset": shadowTokens.none,
 };
 
-// Скругления
-const borderRadius = {
-  sm: "5px", // Для чекбоксов
-  md: "10px", // Для блоков и пунктов
-  lg: "10px",
-};
-
-// Создаем тему MUI
 export const theme = createTheme({
   palette: {
     primary: {
-      main: colors.backgrounds.blue,
-      light: colors.backgrounds.lightBlue,
-      dark: "#4A95B8",
-      contrastText: colors.text.light,
+      main: accentColors.blue.strong,
+      light: accentColors.blue.soft,
+      contrastText: accentColors.blue.contrastText,
     },
     secondary: {
-      main: colors.backgrounds.green,
-      light: colors.backgrounds.lightGreen,
-      dark: "#456A52",
-      contrastText: colors.text.light,
-    },
-    error: {
-      main: colors.backgrounds.red,
-      light: colors.backgrounds.lightPink,
-      dark: "#C26B6B",
-      contrastText: colors.text.light,
+      main: accentColors.green.strong,
+      light: accentColors.green.soft,
+      contrastText: accentColors.green.contrastText,
     },
     warning: {
-      main: colors.backgrounds.yellow,
-      light: colors.backgrounds.lightYellow,
-      dark: "#E3C07A",
-      contrastText: colors.text.dark,
+      main: accentColors.yellow.strong,
+      light: accentColors.yellow.soft,
+      contrastText: accentColors.yellow.contrastText,
+    },
+    error: {
+      main: accentColors.red.strong,
+      light: accentColors.red.soft,
+      contrastText: accentColors.red.contrastText,
     },
     background: {
-      default: colors.neutral.gray100,
-      paper: colors.neutral.white,
+      default: pageBackgrounds.default,
+      paper: surfaceColors.white,
     },
     text: {
-      primary: colors.text.dark,
-      secondary: colors.text.medium,
-      disabled: colors.neutral.gray300,
+      primary: textColors.primary,
+      secondary: textColors.secondary,
+      disabled: borderColors.neutral,
     },
-    divider: colors.neutral.gray300,
+    divider: borderColors.neutral,
   },
   typography,
   shape: {
-    borderRadius: borderRadius.md,
+    borderRadius: radii.md,
   },
   components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundColor: colors.neutral.white,
-          border: `1px solid ${colors.neutral.gray300}`,
-          boxShadow: shadows.small,
-          borderRadius: borderRadius.md,
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: "none",
-          fontWeight: 500,
-          borderRadius: borderRadius.md,
-          boxShadow: "none",
-          "&:hover": {
-            boxShadow: shadows.small,
-          },
-        },
-        contained: {
-          backgroundColor: colors.neutral.white,
-          color: colors.text.dark,
-          border: `1px solid ${colors.accents.blue}`,
-          "&:hover": {
-            boxShadow: shadows.small,
-          },
-        },
-        outlined: {
-          borderWidth: "1px",
-          "&:hover": {
-            borderWidth: "1px",
-          },
-        },
-      },
-      variants: [
-        {
-          props: { variant: "contained", color: "primary" },
-          style: {
-            borderColor: colors.accents.blue,
-          },
-        },
-        {
-          props: { variant: "contained", color: "secondary" },
-          style: {
-            borderColor: colors.accents.green,
-          },
-        },
-        {
-          props: { variant: "contained", color: "error" },
-          style: {
-            borderColor: colors.accents.red,
-          },
-        },
-      ],
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: borderRadius.lg,
-          boxShadow: shadows.small,
-          border: `1px solid ${colors.neutral.gray300}`,
-          backgroundColor: colors.neutral.white,
-        },
-      },
-    },
     MuiTypography: {
       defaultProps: {
         variantMapping: {
           h1: "h1",
           h2: "h2",
           h3: "h3",
-          subtitle1: "p", // 👈 Пункты чек-листа
-          subtitle2: "span", // 👈 Суммы
+          subtitle1: "p",
+          subtitle2: "span",
           body1: "p",
           body2: "p",
           caption: "span",
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: radiusTokens.md,
+          boxShadow: "none",
+          fontWeight: 400,
+          textTransform: "none",
+          "&:hover": {
+            boxShadow: "none",
+          },
         },
       },
     },
@@ -264,34 +388,35 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiOutlinedInput-root": {
-            backgroundColor: colors.neutral.white,
+            borderRadius: radiusTokens.sm,
+            backgroundColor: surfaceColors.white,
+            boxShadow: "none",
             "& fieldset": {
-              borderColor: colors.neutral.gray300,
-              borderWidth: "2px",
+              borderColor: borderColors.neutral,
+              borderWidth: pxToRem(borderWidths.input),
             },
             "&:hover fieldset": {
-              borderColor: colors.neutral.gray400,
+              borderColor: borderColors.neutral,
             },
             "&.Mui-focused fieldset": {
-              borderColor: colors.backgrounds.blue,
-              borderWidth: "2px",
+              borderColor: accentColors.blue.strong,
+              borderWidth: pxToRem(borderWidths.input),
             },
-            // 👇 Стили для textarea (заметки)
-            "& textarea": {
-              fontFamily: "'Roboto Condensed', sans-serif",
-              fontSize: "1.25rem",
+            "& input, & textarea": {
+              color: textColors.secondary,
+              fontFamily:
+                "'Roboto Condensed', -apple-system, BlinkMacSystemFont, sans-serif",
+              fontSize: pxToRem(fontSizes.detail),
               fontWeight: 400,
-              lineHeight: 1.2,
-              letterSpacing: "0.01em",
+              lineHeight: 1.5,
+            },
+            "& textarea": {
               resize: "vertical",
-              minHeight: "60px",
-              padding: "5px 5px",
             },
           },
-          // 👇 Placeholder стили
-          "& .MuiInputLabel-root": {
-            fontFamily: "'Roboto Condensed', sans-serif",
-            fontWeight: 300,
+          "& .MuiInputBase-input::placeholder, & textarea::placeholder": {
+            color: textColors.secondary,
+            opacity: 0.6,
           },
         },
       },
@@ -299,40 +424,26 @@ export const theme = createTheme({
     MuiCheckbox: {
       styleOverrides: {
         root: {
-          padding: "4px",
-          color: colors.neutral.gray300,
+          padding: pxToRem(4),
+          color: borderColors.neutral,
           "& .MuiSvgIcon-root": {
-            width: 24,
-            height: 24,
-            borderRadius: borderRadius.sm,
-            backgroundColor: colors.neutral.white,
-            border: `1px solid ${colors.neutral.gray300}`,
-            // boxShadow: shadows.inner,
+            width: pxToRem(24),
+            height: pxToRem(24),
+            borderRadius: radiusTokens.sm,
+            backgroundColor: surfaceColors.white,
+            border: `${pxToRem(borderWidths.checkbox)} solid ${borderColors.neutral}`,
+            boxShadow: shadowTokens.neutralRead,
           },
           "&.Mui-checked": {
-            color: "transparent",
+            color: accentColors.blue.strong,
             "& .MuiSvgIcon-root": {
-              backgroundColor: colors.backgrounds.blue,
-              position: "relative",
-              "&::after": {
-                content: '""',
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "12px",
-                height: "12px",
-                backgroundColor: colors.neutral.white,
-                borderRadius: "100px",
-                // border: `1px solid ${colors.neutral.gray300}`,
-                // boxShadow: shadows.inner,
-              },
+              backgroundColor: accentColors.blue.strong,
+              borderColor: accentColors.blue.strong,
             },
           },
-          "&.MuiCheckbox-colorSecondary.Mui-checked": {
-            "& .MuiSvgIcon-root": {
-              backgroundColor: colors.backgrounds.green,
-            },
+          "&.MuiCheckbox-colorSecondary.Mui-checked .MuiSvgIcon-root": {
+            backgroundColor: accentColors.green.strong,
+            borderColor: accentColors.green.strong,
           },
         },
       },
@@ -340,10 +451,19 @@ export const theme = createTheme({
   },
 });
 
-// Экспортируем токены для использования в компонентах
 export const designTokens = {
-  colors,
-  typography: typography as any, // временное решение
-  shadows,
-  borderRadius,
+  accentColors,
+  surfaceColors,
+  pageBackgrounds,
+  textColors,
+  borderColors,
+  borderWidths,
+  shadowTokens,
+  fontSizes,
+  radii,
+  motion,
+  typography,
+  cssVariables,
+  getAccentShadowVariable,
+  getSurfaceShadowVariable,
 };

@@ -1,0 +1,40 @@
+@use "../../../styles/functions" as *;
+
+.wrapper {
+  width: 100%;
+  max-width: rem(1600);
+  margin: 0 auto;
+  padding: rem(20);
+  min-height: rem(700);
+}
+
+.grid {
+  display: grid;
+  gap: rem(20);
+  height: 100%;
+  min-height: rem(700);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .wrapper {
+    padding: rem(12);
+    min-height: auto;
+  }
+
+  .grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
+    min-height: auto;
+  }
+
+  .cell {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    height: auto !important;
+  }
+}

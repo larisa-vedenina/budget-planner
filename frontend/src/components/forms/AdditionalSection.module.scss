@@ -1,0 +1,28 @@
+@use "../../styles/functions" as *;
+
+/* Обертка дополнительной секции повторяет логику основных карточек. */
+.sectionWrap {
+  margin-bottom: rem(10);
+  padding: rem(16) rem(20);
+  border: rem(4) solid var(--section-color);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--section-shadow, var(--shadow-neutral-edit));
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: rem(15);
+}
+
+.title {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .sectionWrap {
+    padding: rem(14) rem(16);
+  }
+}

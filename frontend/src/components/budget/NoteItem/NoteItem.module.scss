@@ -1,0 +1,94 @@
+@use "../../../styles/functions" as *;
+
+.noteItem {
+  background: var(--color-white);
+  width: calc(100% - rem(8));
+  max-width: calc(100% - rem(8));
+  border-radius: var(--radius-md);
+  padding: rem(12);
+  margin-bottom: rem(10);
+  position: relative;
+  border: rem(2) solid var(--color-white);
+  box-sizing: border-box;
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.noteItemEditable {
+  box-shadow: var(--budget-card-shadow, var(--shadow-neutral-edit));
+}
+
+.noteItemEditable:hover {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+}
+
+.textarea {
+  width: 100%;
+  min-height: rem(80);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: rem(8);
+  font-size: rem(16);
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  background: var(--color-white);
+  resize: vertical;
+}
+
+.content {
+  min-height: rem(60);
+}
+
+.contentEditable {
+  cursor: text;
+}
+
+.text {
+  font-size: rem(16);
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.signature {
+  position: absolute;
+  bottom: rem(4);
+  right: rem(8);
+}
+
+.signatureText {
+  font-size: rem(16);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.deleteWrap {
+  position: absolute;
+  top: rem(8);
+  right: rem(8);
+}
+
+.deleteButton {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: rem(24);
+  height: rem(24);
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.deleteButton:hover {
+  background: #ffcccc;
+}
+
+.deleteIcon {
+  color: var(--color-accent-red);
+  font-size: rem(16);
+}

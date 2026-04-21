@@ -1,0 +1,30 @@
+@use "../../styles/functions" as *;
+
+.button {
+  width: var(--lock-size);
+  height: var(--lock-size);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  overflow: visible;
+  transition: transform var(--transition-fast);
+}
+
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.buttonUnlocked .iconWrap {
+  transform: rotate(180deg);
+}
+
+.icon {
+  color: var(--lock-color);
+}

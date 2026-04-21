@@ -5,17 +5,35 @@ import React, {
   ReactNode,
   useEffect,
   useCallback,
+  useMemo,
+  useRef,
 } from "react";
 import {
   BudgetPeriod,
   CellColor,
   createDefaultBudgetPeriod,
   calculateCompletedExpenses,
-  calculateActiveExpenses,
   calculateTotalExpenses,
 } from "../types/budget";
 import { ChecklistItemModel } from "../types/checklist-item";
 import { NoteModel } from "../types/note";
+import {
+  applyBudgetSnapshot,
+  clearBudgetStorage,
+  deserializeBudget,
+  getBudgetSnapshot,
+  hasStoredBudgetData,
+  loadCurrentBudget,
+  loadStoredEditMode,
+  saveBudgetSnapshot,
+  serializeBudget,
+  SerializedBudgetPeriod,
+} from "../utils/budgetStorage";
+import { useAuth } from "./AuthContext";
+import {
+  loadRemoteBudgetSnapshot,
+  saveRemoteBudgetSnapshot,
+} from "../services/budgetSyncService";
 
 interface BudgetContextType {
   currentBudget: BudgetPeriod | null;
@@ -81,103 +99,14 @@ interface BudgetContextType {
 
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 
-// Ключи для localStorage
-const STORAGE_KEYS = {
-  CURRENT_BUDGET: "budget_app_current_budget",
-  EDIT_MODE: "budget_app_edit_mode",
-  BUDGETS_HISTORY: "budget_app_budgets_history",
-};
-
-// Вспомогательная функция для сериализации бюджета
-const serializeBudget = (budget: BudgetPeriod): any => {
-  return {
-    ...budget,
-    startDate: budget.startDate.toISOString(),
-    endDate: budget.endDate.toISOString(),
-    createdAt: budget.createdAt.toISOString(),
-    updatedAt: budget.updatedAt.toISOString(),
-    requiredItems: budget.requiredItems.map((item) => ({
-      id: item.id,
-      title: item.title,
-      amount: item.amount,
-      category: item.category,
-      completed: item.completed,
-      priority: item.priority,
-      completedAt: item.completedAt?.toISOString(),
-      dragState: item.dragState,
-      createdAt: item.createdAt.toISOString(),
-    })),
-    desiredItems: budget.desiredItems.map((item) => ({
-      id: item.id,
-      title: item.title,
-      amount: item.amount,
-      category: item.category,
-      completed: item.completed,
-      priority: item.priority,
-      completedAt: item.completedAt?.toISOString(),
-      dragState: item.dragState,
-      createdAt: item.createdAt.toISOString(),
-    })),
-    notes: budget.notes.map((note) => ({
-      id: note.id,
-      content: note.content,
-      type: note.type,
-      createdAt: note.createdAt.toISOString(),
-    })),
-  };
-};
-
-// Вспомогательная функция для десериализации бюджета
-const deserializeBudget = (data: any): BudgetPeriod => {
-  return {
-    ...data,
-    startDate: new Date(data.startDate),
-    endDate: new Date(data.endDate),
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt),
-    requiredItems: data.requiredItems.map((item: any) => {
-      return new ChecklistItemModel(
-        item.id,
-        item.title,
-        item.amount,
-        item.completed,
-        item.category,
-        item.priority,
-        item.completedAt ? new Date(item.completedAt) : undefined,
-        item.dragState || "idle",
-        new Date(item.createdAt),
-      );
-    }),
-    desiredItems: data.desiredItems.map((item: any) => {
-      return new ChecklistItemModel(
-        item.id,
-        item.title,
-        item.amount,
-        item.completed,
-        item.category,
-        item.priority,
-        item.completedAt ? new Date(item.completedAt) : undefined,
-        item.dragState || "idle",
-        new Date(item.createdAt),
-      );
-    }),
-    notes: data.notes.map((note: any) => {
-      return new NoteModel(
-        note.id,
-        note.content,
-        note.type,
-        new Date(note.createdAt),
-      );
-    }),
-  };
-};
-
 export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // Интерфейс для истории действий
+  const { user, isAuthenticated, isAuthLoading } = useAuth();
+  const authenticatedUserId = user?.id ?? null;
+
   interface BudgetHistoryItem {
-    budget: BudgetPeriod;
+    budget: SerializedBudgetPeriod;
     timestamp: Date;
     action: string;
   }
@@ -186,133 +115,158 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [history, setHistory] = useState<BudgetHistoryItem[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const lastAuthenticatedUserIdRef = useRef<string | null>(null);
 
-  // Mock данные для тестирования
-  const mockBudget: BudgetPeriod = {
-    id: "mock_1",
-    title: "Ноябрь 2024",
-    startDate: new Date("2024-11-01"),
-    endDate: new Date("2024-11-30"),
-    totalIncome: 100000,
-    totalExpenses: 75000,
-    remaining: 25000,
-    requiredItems: [
-      ChecklistItemModel.createDefault("required")
-        .updateTitle("Аренда")
-        .updateAmount(15000),
-      ChecklistItemModel.createDefault("required")
-        .updateTitle("Коммуналка")
-        .updateAmount(5000),
-    ],
-    desiredItems: [
-      ChecklistItemModel.createDefault("desired")
-        .updateTitle("Одежда")
-        .updateAmount(8000),
-      ChecklistItemModel.createDefault("desired")
-        .updateTitle("Фитнес")
-        .updateAmount(7000),
-    ],
-    notes: [
-      NoteModel.createAINote("Экономьте на коммунальных услугах"),
-      NoteModel.createUserNote(),
-    ],
-    colors: {
-      required: "#D87B7B" as CellColor,
-      desired: "#507B5D" as CellColor,
-      notes: "#69B5D3" as CellColor,
-    },
-    cellTitles: {
-      required: "ОБЯЗАТЕЛЬНЫЕ",
-      desired: "ЖЕЛАЕМЫЕ",
-      notes: "ЗАМЕТКИ",
-    },
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  // 1. ЗАГРУЗКА ДАННЫХ ПРИ МОНТИРОВАНИИ
-  useEffect(() => {
-    console.log("BudgetProvider: Загрузка данных из localStorage...");
-
-    try {
-      // Загружаем режим редактирования
-      const savedEditMode = localStorage.getItem(STORAGE_KEYS.EDIT_MODE);
-      if (savedEditMode) {
-        setIsEditMode(JSON.parse(savedEditMode));
-      }
-
-      // Загружаем текущий бюджет
-      const savedBudget = localStorage.getItem(STORAGE_KEYS.CURRENT_BUDGET);
-      if (savedBudget) {
-        const parsedData = JSON.parse(savedBudget);
-        const budget = deserializeBudget(parsedData);
-
-        console.log("BudgetProvider: Бюджет загружен из localStorage");
-        setCurrentBudget(budget);
-      } else {
-        // Если нет сохраненного бюджета, используем мок данные
-        console.log("BudgetProvider: Используем mock данные");
-        setCurrentBudget(mockBudget);
-      }
-    } catch (error) {
-      console.error("BudgetProvider: Ошибка загрузки данных:", error);
-      setCurrentBudget(mockBudget);
-    }
+  const resetHistoryState = useCallback((budget: BudgetPeriod, action: string) => {
+    setHistory([
+      {
+        budget: serializeBudget(budget),
+        timestamp: new Date(),
+        action,
+      },
+    ]);
+    setHistoryIndex(0);
   }, []);
 
-  // 2. ФУНКЦИЯ ДЛЯ СОХРАНЕНИЯ ДАННЫХ
+  // Базовое состояние нужно, если сохраненного бюджета пока нет.
+  const fallbackBudget = useMemo<BudgetPeriod>(
+    () => ({
+      id: "default_1",
+      title: "Ноябрь 2024",
+      startDate: new Date("2024-11-01"),
+      endDate: new Date("2024-11-30"),
+      totalIncome: 100000,
+      totalExpenses: 75000,
+      remaining: 25000,
+      requiredItems: [
+        ChecklistItemModel.createDefault("required")
+          .updateTitle("Аренда")
+          .updateAmount(15000),
+        ChecklistItemModel.createDefault("required")
+          .updateTitle("Коммуналка")
+          .updateAmount(5000),
+      ],
+      desiredItems: [
+        ChecklistItemModel.createDefault("desired")
+          .updateTitle("Одежда")
+          .updateAmount(8000),
+        ChecklistItemModel.createDefault("desired")
+          .updateTitle("Фитнес")
+          .updateAmount(7000),
+      ],
+      notes: [
+        NoteModel.createAINote("Экономьте на коммунальных услугах"),
+        NoteModel.createUserNote(),
+      ],
+      colors: {
+        required: "#D87B7B" as CellColor,
+        desired: "#507B5D" as CellColor,
+        notes: "#69B5D3" as CellColor,
+      },
+      cellTitles: {
+        required: "ОБЯЗАТЕЛЬНЫЕ",
+        desired: "НЕОБЯЗАТЕЛЬНЫЕ",
+        notes: "ЗАМЕТКИ",
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
+    [],
+  );
+
+  const restoreLocalBudgetState = useCallback(
+    (fallbackAction: string) => {
+      setIsEditMode(loadStoredEditMode());
+
+      const storedBudget = loadCurrentBudget();
+      if (storedBudget) {
+        setCurrentBudget(storedBudget);
+        resetHistoryState(storedBudget, "Загрузка бюджета");
+        return;
+      }
+
+      setCurrentBudget(fallbackBudget);
+      resetHistoryState(fallbackBudget, fallbackAction);
+    },
+    [fallbackBudget, resetHistoryState],
+  );
+
+  useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const initializeBudgetState = async () => {
+      try {
+        if (isAuthenticated && authenticatedUserId) {
+          const remoteSnapshot = await loadRemoteBudgetSnapshot();
+
+          if (isCancelled) {
+            return;
+          }
+
+          if (
+            remoteSnapshot &&
+            (remoteSnapshot.currentBudget || remoteSnapshot.budgetsHistory.length > 0)
+          ) {
+            applyBudgetSnapshot(remoteSnapshot);
+          } else if (hasStoredBudgetData()) {
+            await saveRemoteBudgetSnapshot(getBudgetSnapshot());
+          }
+
+          lastAuthenticatedUserIdRef.current = authenticatedUserId;
+          restoreLocalBudgetState("Инициализация бюджета");
+          return;
+        }
+
+        if (lastAuthenticatedUserIdRef.current) {
+          clearBudgetStorage();
+          lastAuthenticatedUserIdRef.current = null;
+        }
+
+        restoreLocalBudgetState("Инициализация бюджета");
+      } catch (error) {
+        console.error("Ошибка загрузки бюджета:", error);
+
+        if (!isCancelled) {
+          setCurrentBudget(fallbackBudget);
+          resetHistoryState(fallbackBudget, "Восстановление бюджета");
+        }
+      }
+    };
+
+    void initializeBudgetState();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    fallbackBudget,
+    authenticatedUserId,
+    isAuthenticated,
+    isAuthLoading,
+    resetHistoryState,
+    restoreLocalBudgetState,
+  ]);
+
   const saveToStorage = useCallback(() => {
     if (!currentBudget) return;
 
-    console.log("BudgetProvider: Сохранение данных в localStorage...");
-
     try {
-      // Сохраняем режим редактирования
-      localStorage.setItem(STORAGE_KEYS.EDIT_MODE, JSON.stringify(isEditMode));
+      saveBudgetSnapshot(currentBudget, isEditMode);
 
-      // Сохраняем текущий бюджет
-      const serializedBudget = serializeBudget(currentBudget);
-      localStorage.setItem(
-        STORAGE_KEYS.CURRENT_BUDGET,
-        JSON.stringify(serializedBudget),
-      );
-
-      // Добавляем в историю для архива
-      const historyStr = localStorage.getItem(STORAGE_KEYS.BUDGETS_HISTORY);
-      let history: any[] = [];
-
-      if (historyStr) {
-        try {
-          history = JSON.parse(historyStr);
-        } catch (e) {
-          console.error("Ошибка парсинга истории:", e);
-        }
+      if (isAuthenticated) {
+        void saveRemoteBudgetSnapshot(getBudgetSnapshot()).catch((error) => {
+          console.error("Не удалось сохранить бюджет на сервере:", error);
+        });
       }
-
-      // Ищем, есть ли уже этот бюджет в истории
-      const existingIndex = history.findIndex((b) => b.id === currentBudget.id);
-
-      if (existingIndex !== -1) {
-        // Обновляем существующий
-        history[existingIndex] = serializedBudget;
-      } else {
-        // Добавляем новый
-        history.push(serializedBudget);
-      }
-
-      // Сохраняем историю
-      localStorage.setItem(
-        STORAGE_KEYS.BUDGETS_HISTORY,
-        JSON.stringify(history),
-      );
-
-      console.log("BudgetProvider: Данные успешно сохранены");
     } catch (error) {
-      console.error("BudgetProvider: Ошибка сохранения данных:", error);
+      console.error("Ошибка сохранения бюджета:", error);
     }
-  }, [currentBudget, isEditMode]);
+  }, [currentBudget, isAuthenticated, isEditMode]);
 
-  // 3. АВТОСОХРАНЕНИЕ ПРИ ИЗМЕНЕНИЯХ
   useEffect(() => {
     if (currentBudget) {
       const timeoutId = setTimeout(() => {
@@ -323,7 +277,6 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [currentBudget, isEditMode, saveToStorage]);
 
-  // Вспомогательная функция для обновления бюджета с пересчетом всех сумм
   const updateBudgetWithRecalculation = (
     budget: BudgetPeriod,
     updates: Partial<BudgetPeriod>,
@@ -341,46 +294,32 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     return updatedBudget;
   };
 
-  // Функция для добавления в историю
   const addToHistory = useCallback(
     (action: string, budget: BudgetPeriod) => {
       const newHistoryItem: BudgetHistoryItem = {
-        budget: JSON.parse(JSON.stringify(budget)), // глубокое копирование
+        budget: serializeBudget(budget),
         timestamp: new Date(),
         action,
       };
 
-      // Обрезаем историю после текущего индекса
       const newHistory = [
         ...history.slice(0, historyIndex + 1),
         newHistoryItem,
       ];
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
-
-      console.log("История добавлена:", {
-        action,
-        historyLength: newHistory.length,
-      });
     },
     [history, historyIndex],
   );
 
-  // Функции undo/redo
   const undo = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
       const previousBudget = history[newIndex].budget;
 
-      // Восстанавливаем бюджет
       const restoredBudget = deserializeBudget(previousBudget);
       setCurrentBudget(restoredBudget);
-
-      console.log("Undo выполнен:", {
-        index: newIndex,
-        action: history[newIndex].action,
-      });
     }
   }, [history, historyIndex]);
 
@@ -392,23 +331,21 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
       const restoredBudget = deserializeBudget(nextBudget);
       setCurrentBudget(restoredBudget);
-
-      console.log("Redo выполнен:", {
-        index: newIndex,
-        action: history[newIndex].action,
-      });
     }
   }, [history, historyIndex]);
 
-  // Добавляем обработчик клавиш Ctrl+Z
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (window.location.pathname !== "/main") {
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
         if (e.shiftKey) {
-          redo(); // Ctrl+Shift+Z для redo
+          redo();
         } else {
-          undo(); // Ctrl+Z для undo
+          undo();
         }
       }
     };
@@ -419,36 +356,29 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
   const toggleEditMode = () => setIsEditMode(!isEditMode);
 
-  // Добавление пункта
   const addItem = (
     item: ChecklistItemModel,
     category: "required" | "desired",
   ) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
-    // Добавляем новый пункт
     const items =
       category === "required" ? budget.requiredItems : budget.desiredItems;
     const updatedItems = [...items, item];
 
-    // Сортируем: приоритетные → старые → новые
     const sortedItems = [...updatedItems].sort((a, b) => {
-      // Только для активных пунктов
       if (a.completed && !b.completed) return 1;
       if (!a.completed && b.completed) return -1;
 
       if (!a.completed && !b.completed) {
-        // Приоритетные сверху
         if (a.priority === "priority" && b.priority !== "priority") return -1;
         if (a.priority !== "priority" && b.priority === "priority") return 1;
 
-        // Старые выше новых
         return (
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
       }
 
-      // Выполненные остаются в конце
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
 
@@ -463,14 +393,12 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       desiredItems: updatedDesiredItems,
     });
 
-    console.log("addItem:", { category, newItem: item, updatedBudget });
     addToHistory("Добавление пункта", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Обновление пункта
   const updateItem = (updatedItem: ChecklistItemModel) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     let itemFound = false;
     const updatedRequiredItems = budget.requiredItems.map((item) => {
@@ -496,14 +424,12 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       desiredItems: updatedDesiredItems,
     });
 
-    console.log("updateItem:", { updatedItem, updatedBudget });
     addToHistory("Обновление пункта", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Удаление пункта
   const deleteItem = (id: string, category: "required" | "desired") => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedRequiredItems =
       category === "required"
@@ -520,14 +446,12 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       desiredItems: updatedDesiredItems,
     });
 
-    console.log("deleteItem:", { id, category, updatedBudget });
     addToHistory("Удаление пункта", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Переключение состояния выполнения пункта
   const toggleItem = (id: string, category: "required" | "desired") => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedRequiredItems =
       category === "required"
@@ -548,27 +472,17 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       desiredItems: updatedDesiredItems,
     });
 
-    console.log("toggleItem:", {
-      id,
-      category,
-      item: [...updatedRequiredItems, ...updatedDesiredItems].find(
-        (i) => i.id === id,
-      ),
-      completedExpenses: calculateCompletedExpenses(updatedBudget),
-      remaining: updatedBudget.remaining,
-    });
     addToHistory("Переключение пункта", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Переупорядочивание внутри категории
   const reorderItems = useCallback(
     (
       category: "required" | "desired" | "notes",
       oldIndex: number,
       newIndex: number,
     ) => {
-      const budget = currentBudget || mockBudget;
+      const budget = currentBudget || fallbackBudget;
 
       if (category === "notes") {
         const updatedNotes = [...budget.notes];
@@ -579,39 +493,43 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
           notes: updatedNotes,
         });
 
-        console.log("reorderItems: заметки", { oldIndex, newIndex });
         addToHistory("Переупорядочивание заметок", updatedBudget);
         setCurrentBudget(updatedBudget);
       } else {
         const items =
           category === "required" ? budget.requiredItems : budget.desiredItems;
-        const updatedItems = [...items];
-        const [movedItem] = updatedItems.splice(oldIndex, 1);
-        updatedItems.splice(newIndex, 0, movedItem);
+        const activeItems = items.filter((item) => !item.completed);
+        const completedItems = items.filter((item) => item.completed);
+        const updatedActiveItems = [...activeItems];
+        const [movedItem] = updatedActiveItems.splice(oldIndex, 1);
+
+        if (!movedItem) {
+          return;
+        }
+
+        updatedActiveItems.splice(newIndex, 0, movedItem);
+        const updatedItems = [...updatedActiveItems, ...completedItems];
 
         const updatedBudget = updateBudgetWithRecalculation(budget, {
           [category === "required" ? "requiredItems" : "desiredItems"]:
             updatedItems,
         });
 
-        console.log("reorderItems:", { category, oldIndex, newIndex });
         addToHistory("Переупорядочивание пунктов", updatedBudget);
         setCurrentBudget(updatedBudget);
       }
     },
-    [currentBudget, addToHistory],
+    [currentBudget, fallbackBudget, addToHistory],
   );
 
-  // Перемещение между категориями (только required <-> desired)
   const moveItemBetweenCategories = useCallback(
     (
       itemId: string,
       fromCategory: "required" | "desired",
       toCategory: "required" | "desired",
     ) => {
-      const budget = currentBudget || mockBudget;
+      const budget = currentBudget || fallbackBudget;
 
-      // Находим перемещаемый пункт
       const sourceItems =
         fromCategory === "required"
           ? budget.requiredItems
@@ -619,32 +537,25 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       const itemToMove = sourceItems.find((item) => item.id === itemId);
 
       if (!itemToMove) {
-        console.error("moveItemBetweenCategories: пункт не найден", {
-          itemId,
-          fromCategory,
-        });
         return;
       }
 
-      // Создаем новый объект с измененной категорией
       const movedItem = new ChecklistItemModel(
         itemToMove.id,
         itemToMove.title,
         itemToMove.amount,
         itemToMove.completed,
-        toCategory, // Новая категория
+        toCategory,
         itemToMove.priority,
         itemToMove.completedAt,
         itemToMove.dragState,
         itemToMove.createdAt,
       );
 
-      // Удаляем из исходной категории
       const updatedSourceItems = sourceItems.filter(
         (item) => item.id !== itemId,
       );
 
-      // Добавляем в целевую категорию (в начало)
       const targetItems =
         toCategory === "required" ? budget.requiredItems : budget.desiredItems;
       const updatedTargetItems = [movedItem, ...targetItems];
@@ -664,35 +575,25 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
               : budget.desiredItems,
       });
 
-      console.log("moveItemBetweenCategories:", {
-        itemId,
-        fromCategory,
-        toCategory,
-        itemTitle: itemToMove.title,
-      });
-
       addToHistory("Перемещение пункта между категориями", updatedBudget);
       setCurrentBudget(updatedBudget);
     },
-    [currentBudget, addToHistory],
+    [currentBudget, fallbackBudget, addToHistory],
   );
 
-  // Добавление заметки
   const addNote = (note: NoteModel) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       notes: [...budget.notes, note],
     });
 
-    console.log("addNote:", { note, updatedBudget });
     addToHistory("Добавление заметки", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Обновление заметки
   const updateNote = (updatedNote: NoteModel) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       notes: budget.notes.map((note) =>
@@ -700,30 +601,26 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       ),
     });
 
-    console.log("updateNote:", { updatedNote, updatedBudget });
     addToHistory("Обновление заметки", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Удаление заметки
   const deleteNote = (id: string) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       notes: budget.notes.filter((note) => note.id !== id),
     });
 
-    console.log("deleteNote:", { id, updatedBudget });
     addToHistory("Удаление заметки", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Обновление цвета ячейки
   const updateColor = (
     cellType: "required" | "desired" | "notes",
     color: CellColor,
   ) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       colors: {
@@ -732,32 +629,23 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       },
     });
 
-    console.log("updateColor:", { cellType, color, updatedBudget });
     addToHistory("Изменение цвета", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Обновление дохода бюджета
   const updateBudgetIncome = (newIncome: number) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       totalIncome: newIncome,
     });
 
-    console.log("updateBudgetIncome:", {
-      newIncome,
-      oldIncome: budget.totalIncome,
-      remaining: updatedBudget.remaining,
-      updatedBudget,
-    });
     addToHistory("Изменение бюджета", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Обновление периода
   const updatePeriod = (startDate: Date, endDate: Date) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       startDate,
@@ -765,17 +653,15 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       title: `${startDate.toLocaleDateString("ru-RU", { month: "long" })} ${startDate.getFullYear()}`,
     });
 
-    console.log("updatePeriod:", { startDate, endDate, updatedBudget });
     addToHistory("Изменение периода", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Обновление заголовков ячеек
   const updateTitle = (
     category: "required" | "desired" | "notes",
     newTitle: string,
   ) => {
-    const budget = currentBudget || mockBudget;
+    const budget = currentBudget || fallbackBudget;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       cellTitles: {
@@ -784,39 +670,39 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       },
     });
 
-    console.log("updateTitle:", { category, newTitle, updatedBudget });
     addToHistory("Изменение заголовка", updatedBudget);
     setCurrentBudget(updatedBudget);
   };
 
-  // Загрузка бюджета
   const loadBudget = (budget: BudgetPeriod) => {
-    console.log("loadBudget:", budget);
     setCurrentBudget(budget);
+    resetHistoryState(budget, "Загрузка бюджета");
   };
 
-  // Создание нового бюджета
   const createNewBudget = () => {
-    console.log("createNewBudget");
     const newBudget = createDefaultBudgetPeriod();
     setCurrentBudget(newBudget);
+    resetHistoryState(newBudget, "Создание нового бюджета");
   };
 
-  // Сохранение бюджета
   const saveBudget = () => {
     saveToStorage();
   };
 
-  // Очистка хранилища
   const clearStorage = () => {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_BUDGET);
-    localStorage.removeItem(STORAGE_KEYS.EDIT_MODE);
-    console.log("Хранилище очищено");
+    clearBudgetStorage();
+
+    if (isAuthenticated) {
+      void saveRemoteBudgetSnapshot(getBudgetSnapshot()).catch((error) => {
+        console.error("Не удалось очистить бюджет на сервере:", error);
+      });
+    }
+
     window.location.reload();
   };
 
   const value: BudgetContextType = {
-    currentBudget: currentBudget || mockBudget,
+    currentBudget: currentBudget || fallbackBudget,
     isEditMode,
     toggleEditMode,
     addItem,
@@ -835,12 +721,10 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     createNewBudget,
     saveBudget,
     clearStorage,
-    // Undo/Redo
     undo,
     redo,
     canUndo: historyIndex > 0,
     canRedo: historyIndex < history.length - 1,
-    // Drag & Drop
     reorderItems,
     moveItemBetweenCategories,
   };

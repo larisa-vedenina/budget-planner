@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Popover } from "@mui/material";
 import { CellColor } from "../../../types/budget";
+import styles from "./ColorPickerButton.module.scss";
 
 interface ColorPickerButtonProps {
   currentColor: CellColor;
@@ -40,28 +41,27 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
       {/* Кнопка выбора цвета */}
       <button
         onClick={handleClick}
-        style={{
-          width: "24px",
-          height: "24px",
-          borderRadius: "50%",
-          backgroundColor: currentColor,
-          border: "2px solid #F9F9F9",
-          cursor: "pointer",
-          position: "absolute",
-          bottom: "12px",
-          left: "12px",
-          boxShadow: "1px 1px .5px rgba(0,0,0,0.2)",
-        }}
+        className={styles.trigger}
+        style={
+          {
+            "--picker-current-color": currentColor,
+          } as React.CSSProperties
+        }
         aria-label="Выбрать цвет фона"
         title="Изменить цвет фона"
       />
 
       {/* Поповер с выбором цвета */}
       <Popover
-        // id={id}
         open={open}
         anchorEl={anchorEl}
         onClose={handleClose}
+        disableScrollLock
+        disableRestoreFocus
+        disableAutoFocus
+        disableEnforceFocus
+        transitionDuration={0}
+        keepMounted
         anchorOrigin={{
           vertical: "top",
           horizontal: "left",
@@ -71,17 +71,7 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
           horizontal: "left",
         }}
       >
-        <Box
-          sx={{
-            padding: "16px",
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "8px",
-            backgroundColor: "#FFFFFF",
-            borderRadius: "8px",
-            boxShadow: "2px 2px 1px rgba(0,0,0,0.15)",
-          }}
-        >
+        <Box className={styles.palette}>
           {availableColors.map((color) => (
             <button
               key={color}
@@ -89,24 +79,14 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
                 onColorChange(color);
                 handleClose();
               }}
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                backgroundColor: color,
-                border:
-                  color === currentColor
-                    ? "2px solid #0D0D0D"
-                    : "1px solid #D9D9D9",
-                cursor: "pointer",
-                transition: "transform 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-              }}
+              className={`${styles.swatch} ${
+                color === currentColor ? styles.swatchActive : ""
+              }`}
+              style={
+                {
+                  "--picker-color": color,
+                } as React.CSSProperties
+              }
               aria-label={`Выбрать цвет ${color}`}
             />
           ))}

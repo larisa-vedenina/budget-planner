@@ -1,0 +1,33 @@
+@use "../../../styles/functions" as *;
+
+.checkbox {
+  width: rem(24);
+  height: rem(24);
+  border: var(--checkbox-border, rem(1) solid var(--color-border));
+  border-radius: rem(5);
+  box-shadow: var(
+    --checkbox-shadow,
+    -rem(1) rem(1) rem(0.5) rgba(0, 0, 0, 0.25)
+  );
+  transform: var(--checkbox-transform, none);
+  background: var(--checkbox-bg, var(--color-white));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.checked {
+  --checkbox-border: none;
+  --checkbox-shadow: none;
+  --checkbox-transform: translate(-rem(1), rem(1));
+  --checkbox-bg: var(--checkbox-color, var(--color-white));
+}
+
+.dot {
+  width: rem(12);
+  height: rem(12);
+  border-radius: 50%;
+  background: var(--checkbox-color, var(--color-white));
+}

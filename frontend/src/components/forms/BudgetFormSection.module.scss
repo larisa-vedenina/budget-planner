@@ -1,0 +1,42 @@
+@use "../../styles/functions" as *;
+
+/* Основная карточка секции формы. */
+.section {
+  margin-bottom: rem(10);
+  padding: rem(25);
+  border: rem(3) solid var(--section-color);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--section-shadow, var(--shadow-neutral-edit));
+}
+
+.nested {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.header {
+  margin-bottom: rem(20);
+}
+
+.title {
+  color: var(--color-text-primary);
+}
+
+/* Строка ввода новых пунктов. */
+.inputRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: rem(10);
+  margin-bottom: rem(20);
+}
+
+@media (max-width: 600px) {
+  .section {
+    padding: rem(18);
+  }
+}

@@ -1,9 +1,18 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChecklistItemModel } from "../../../types/checklist-item";
 import { Box } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
+import { pxToRem } from "../../../styles/units";
+import styles from "./ChecklistItem.module.scss";
+
+interface DragHandleProps {
+  attributes?: Record<string, any>;
+  listeners?: Record<string, any>;
+  ref?: (element: HTMLButtonElement | null) => void;
+}
 
 interface ChecklistItemProps {
   item: ChecklistItemModel;
@@ -12,6 +21,7 @@ interface ChecklistItemProps {
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   backgroundColor?: string;
+  dragHandleProps?: DragHandleProps;
 }
 
 export const ChecklistItem: React.FC<ChecklistItemProps> = ({
@@ -21,6 +31,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
   onDelete,
   onToggle,
   backgroundColor = "#FFFFFF",
+  dragHandleProps,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingAmount, setIsEditingAmount] = useState(false);
@@ -36,53 +47,31 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     return darkCellColors.includes(backgroundColor) ? "#FFDFDF" : "#D87B7B";
   };
 
-  // Стили пункта в зависимости от состояния
-  const getItemStyles = (): React.CSSProperties => {
-    const baseStyles: React.CSSProperties = {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      backgroundColor: item.priority === "priority" ? "#FDF7F7" : "#FFFFFF",
-      color: "#101010",
-      border:
-        item.priority === "priority"
-          ? `2px solid ${getPriorityBorderColor()}`
-          : "2px solid #FFFFFF",
-      borderRadius: "10px",
-      padding: "15px",
-      marginBottom: "10px",
-      fontSize: "24px",
-      transition: "all 0.2s ease",
-      fontFamily: "Roboto Condensed, sans-serif",
-      position: "relative",
-      boxShadow: "none",
-      minHeight: "80px",
-    };
-
-    return baseStyles;
-  };
-
   // Если пункт выполнен, НЕ показываем звездочку в режиме редактирования
   const shouldShowPriorityStar = () => {
     return isEditing && !item.completed;
   };
 
   // Обработчик сохранения названия
-  const handleTitleSave = () => {
-    if (tempTitle.trim() && tempTitle !== item.title) {
-      onUpdate(item.updateTitle(tempTitle.trim()));
+  const handleTitleSave = useCallback(() => {
+    const nextTitle = tempTitle.trim();
+
+    if (nextTitle && nextTitle !== item.title) {
+      setTempTitle(nextTitle);
+      onUpdate(item.updateTitle(nextTitle));
     }
     setIsEditingTitle(false);
-  };
+  }, [item, onUpdate, tempTitle]);
 
   // Обработчик сохранения суммы
-  const handleAmountSave = () => {
+  const handleAmountSave = useCallback(() => {
     const amount = parseFloat(tempAmount);
     if (!isNaN(amount) && amount >= 0 && amount !== item.amount) {
+      setTempAmount(amount.toString());
       onUpdate(item.updateAmount(amount));
     }
     setIsEditingAmount(false);
-  };
+  }, [item, onUpdate, tempAmount]);
 
   // Обработчик нажатия клавиш
   const handleTitleKeyPress = (e: React.KeyboardEvent) => {
@@ -125,67 +114,77 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingTitle, isEditingAmount, tempTitle, tempAmount]);
+  }, [handleAmountSave, handleTitleSave, isEditingAmount, isEditingTitle]);
 
   // Фокус на инпут при начале редактирования
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
-      titleInputRef.current.select();
     }
     if (isEditingAmount && amountInputRef.current) {
       amountInputRef.current.focus();
-      amountInputRef.current.select();
     }
   }, [isEditingTitle, isEditingAmount]);
+
+  // Синхронизируем локальное отображение после внешних обновлений, но не мешаем живому редактированию.
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setTempTitle(item.title);
+    }
+  }, [isEditingTitle, item.title]);
+
+  useEffect(() => {
+    if (!isEditingAmount) {
+      setTempAmount(item.amount.toString());
+    }
+  }, [isEditingAmount, item.amount]);
 
   const togglePriority = () => {
     onUpdate(item.togglePriority());
   };
 
-  // Стили для контейнера
-  const containerStyle: React.CSSProperties = {
-    ...getItemStyles(),
-    boxShadow: "none",
-  };
+  const containerStyle = {
+    "--priority-border-color": getPriorityBorderColor(),
+    "--checkbox-color": backgroundColor,
+    "--completed-strike-color": backgroundColor,
+    "--completed-strike-left": pxToRem(95),
+    "--completed-strike-right": isEditing ? pxToRem(60) : pxToRem(15),
+  } as React.CSSProperties;
+  const parsedAmount = Number.parseFloat(tempAmount);
+  const displayAmount = Number.isFinite(parsedAmount)
+    ? parsedAmount.toLocaleString("ru-RU")
+    : item.amount.toLocaleString("ru-RU");
 
   return (
     <Box
       data-item-id={item.id}
       style={containerStyle}
-      className="checklist-item"
-      sx={{
-        "&:hover": {
-          boxShadow: isEditing ? "-1px 1px 0.5px rgba(0, 0, 0, 0.25)" : "none",
-          "& .checkbox-hover-effect": {
-            boxShadow: item.completed
-              ? "none"
-              : "-2px 2px 1px rgba(0, 0, 0, 0.25)",
-            transform: item.completed ? "translate(-1px, 1px)" : "none",
-          },
-        },
-      }}
+      className={`checklist-item ${styles.item} ${
+        isEditing ? styles.itemEditable : ""
+      } ${item.priority === "priority" ? styles.itemPriority : ""} ${
+        item.completed ? styles.itemCompleted : ""
+      }`}
     >
-      {/* ЛЕВАЯ ЧАСТЬ: звездочка приоритета или чекбокс */}
-      <Box
-        sx={{
-          marginRight: "12px",
-          display: "flex",
-          alignItems: "center",
-          minWidth: "32px", // Фиксированная ширина для выравнивания
-        }}
-      >
+      {/* Левая часть: ручка для drag и управление пунктом */}
+      <Box className={styles.left}>
+        {isEditing && !item.completed && dragHandleProps && (
+          <button
+            ref={dragHandleProps.ref}
+            type="button"
+            className={styles.dragHandle}
+            title="Перетащить пункт"
+            {...(dragHandleProps.attributes ?? {})}
+            {...(dragHandleProps.listeners ?? {})}
+          >
+            <DragIndicatorIcon className={styles.dragHandleIcon} />
+          </button>
+        )}
+
         {shouldShowPriorityStar() ? (
           // В режиме редактирования для невыполненных - звездочка приоритета
           <div
             onClick={togglePriority}
-            style={{
-              cursor: "pointer",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            className={styles.iconButton}
             title={
               item.priority === "priority"
                 ? "Убрать приоритет"
@@ -193,69 +192,26 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             }
           >
             {item.priority === "priority" ? (
-              <StarIcon
-                style={{
-                  color: getPriorityBorderColor(),
-                  fontSize: "28px",
-                }}
-              />
+              <StarIcon className={styles.starActive} />
             ) : (
-              <StarBorderIcon
-                style={{
-                  color: "#D9D9D9",
-                  fontSize: "28px",
-                }}
-              />
+              <StarBorderIcon className={styles.starInactive} />
             )}
           </div>
         ) : (
           // Для выполненных или в режиме просмотра - чекбокс
           <div
             onClick={() => onToggle(item.id)}
-            className="checkbox-hover-effect"
-            style={{
-              width: "24px",
-              height: "24px",
-              border: item.completed ? "none" : "1px solid #D9D9D9",
-              borderRadius: "5px",
-              boxShadow: item.completed
-                ? "none"
-                : "-1px 1px 0.5px rgba(0, 0, 0, 0.25)",
-              transform: item.completed ? "translate(-1px, 1px)" : "none",
-              backgroundColor: item.completed ? backgroundColor : "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-            }}
+            className={`${styles.checkbox} ${
+              item.completed ? styles.checkboxCompleted : ""
+            }`}
           >
-            {item.completed && (
-              <div
-                style={{
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "50%",
-                  backgroundColor: backgroundColor,
-                }}
-              />
-            )}
+            {item.completed && <div className={styles.checkboxInner} />}
           </div>
         )}
       </Box>
 
       {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ: название пункта - только для редактирования текста */}
-      <Box
-        sx={{
-          flex: "1 1 auto",
-          marginRight: "16px",
-          minHeight: "36px",
-          display: "flex",
-          alignItems: "center",
-          overflow: "hidden",
-          maxWidth: "calc(100% - 280px)",
-        }}
-      >
+      <Box className={styles.content}>
         {isEditing && isEditingTitle ? (
           <input
             ref={titleInputRef}
@@ -264,130 +220,62 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             onChange={(e) => setTempTitle(e.target.value)}
             onKeyDown={handleTitleKeyPress}
             onBlur={handleTitleSave}
-            style={{
-              border: "none",
-              borderRadius: "5px",
-              padding: "8px 12px",
-              fontSize: "24px",
-              width: "100%",
-              fontFamily: "Roboto Condensed, sans-serif",
-              color: "#101010",
-              backgroundColor: "#FFFFFF",
-            }}
+            className={styles.textInput}
             placeholder="Название пункта"
           />
         ) : (
           <div
             onClick={() => isEditing && setIsEditingTitle(true)}
-            style={{
-              fontSize: "24px",
-              fontWeight: item.priority === "priority" ? "normal" : "normal",
-              color: "#101010",
-              textDecoration: item.completed ? "line-through" : "none",
-              cursor: isEditing ? "text" : "default",
-              fontFamily: "Roboto Condensed, sans-serif",
-              padding: "4px 0",
-              width: "100%",
-              // Уменьшаем область клика для редактирования
-              minHeight: "40px",
-              display: "flex",
-              alignItems: "center",
-            }}
+            className={`${styles.textDisplay} ${
+              isEditing ? styles.textDisplayEditable : ""
+            } ${item.completed ? styles.textCompleted : ""}`}
           >
-            {item.title}
+            {tempTitle}
           </div>
         )}
       </Box>
 
       {/* ПРАВАЯ ЧАСТЬ: сумма - только для редактирования */}
       <Box
-        sx={{
-          minWidth: "120px",
-          textAlign: "right",
-          marginRight: isEditing ? "12px" : "0",
-        }}
+        className={`${styles.amountWrap} ${
+          isEditing ? styles.amountWrapEditing : ""
+        }`}
       >
         {isEditing && isEditingAmount ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "8px",
-            }}
-          >
+          <div className={styles.amountEditor}>
             <input
               ref={amountInputRef}
               type="number"
               value={tempAmount}
               onChange={(e) => setTempAmount(e.target.value)}
               onKeyDown={handleAmountKeyPress}
-              style={{
-                border: "0px solid #ffffff",
-                borderRadius: "5px",
-                padding: "8px 12px",
-                fontSize: "24px",
-                width: "100px",
-                textAlign: "right",
-                fontFamily: "Roboto Condensed, sans-serif",
-                color: "#101010",
-                backgroundColor: "#FFFFFF",
-              }}
+              className={styles.amountInput}
               min="0"
               step="100"
             />
-            <span style={{ fontSize: "24px", color: "#101010" }}>₽</span>
+            <span className={styles.currency}>₽</span>
           </div>
         ) : (
           <div
             onClick={() => isEditing && setIsEditingAmount(true)}
-            style={{
-              fontSize: "24px",
-              fontWeight: "normal",
-              color: "#101010",
-              textDecoration: item.completed ? "line-through" : "none",
-              cursor: isEditing ? "text" : "default",
-              fontFamily: "Roboto Condensed, sans-serif",
-              // Уменьшаем область клика
-              minHeight: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-            }}
+            className={`${styles.amountText} ${
+              isEditing ? styles.amountTextEditable : ""
+            } ${item.completed ? styles.textCompleted : ""}`}
           >
-            {item.amount.toLocaleString("ru-RU")}₽
+            {displayAmount}₽
           </div>
         )}
       </Box>
 
       {/* Кнопка удаления (только в режиме редактирования) */}
       {isEditing && (
-        <Box
-          sx={{
-            marginLeft: "8px",
-            minWidth: "32px",
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
+        <Box className={styles.deleteWrap}>
           <div
             onClick={() => onDelete(item.id)}
-            style={{
-              cursor: "pointer",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            className={styles.deleteButton}
             title="Удалить пункт"
           >
-            <DeleteIcon
-              style={{
-                color: "#D87B7B",
-                fontSize: "28px",
-                transition: "all 0.2s ease",
-              }}
-            />
+            <DeleteIcon className={styles.deleteIcon} />
           </div>
         </Box>
       )}
