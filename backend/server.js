@@ -1265,11 +1265,23 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-const startServer = async () => {
-  if (pool) {
-    await ensureDatabaseSchema();
+const initializeDatabaseSchema = async () => {
+  if (!pool) {
+    return;
   }
 
+  try {
+    await ensureDatabaseSchema();
+    console.log("[budget-planner-backend] Database schema is ready.");
+  } catch (error) {
+    console.error(
+      "[budget-planner-backend] Database initialization failed during startup. The app will stay online, but auth and remote budget sync will be unavailable until the database becomes reachable.",
+      error,
+    );
+  }
+};
+
+const startServer = async () => {
   server.listen(config.port, config.host, () => {
     console.log(
       `[budget-planner-backend] listening on http://${config.host}:${config.port} using ${config.provider}/${config.model}`,
@@ -1292,6 +1304,8 @@ const startServer = async () => {
         "[budget-planner-backend] Twilio Verify is not configured. SMS verification will be unavailable.",
       );
     }
+
+    void initializeDatabaseSchema();
   });
 };
 
