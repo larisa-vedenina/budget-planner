@@ -394,9 +394,16 @@ const FormPage: React.FC = () => {
             fullWidth
             multiline
             rows={4}
+            autoComplete="off"
+            name="budget-ai-comment"
             placeholder="Расскажите о ваших финансовых целях, предпочтениях или любых особых обстоятельствах..."
             value={formData.aiComment}
             onChange={handleAICommentChange}
+            inputProps={{
+              autoComplete: "off",
+              autoCapitalize: "off",
+              spellCheck: false,
+            }}
             sx={aiCommentSx}
           />
         </Box>
@@ -448,26 +455,30 @@ const FormPage: React.FC = () => {
           </Button>
         </Box>
 
+      </Container>
+
+      <div className={styles.pageFooter}>
         <div className={styles.bottomNav}>
           <button
             type="button"
             className={styles.backButton}
             onClick={() => navigate("/start")}
           >
-            ← На старт
+            Вернуться
           </button>
         </div>
-      </Container>
 
-      <InfoHint
-        ariaLabel="Подсказки по заполнению формы"
-        variant="red"
-        messages={[
-          "Отменить последнее изменение можно сочетанием Ctrl+Z.",
-          "Новый пункт создается нажатием клавиши Enter.",
-          "В комментарии лучше добавлять больше деталей, чтобы план получился точнее.",
-        ]}
-      />
+        <InfoHint
+          ariaLabel="Подсказки по заполнению формы"
+          variant="red"
+          floating={false}
+          messages={[
+            "Отменить последнее изменение можно сочетанием Ctrl+Z.",
+            "Новый пункт создается нажатием клавиши Enter.",
+            "В комментарии лучше добавлять больше деталей, чтобы план получился точнее.",
+          ]}
+        />
+      </div>
     </Box>
   );
 };

@@ -12,21 +12,16 @@
   margin: rem(50) auto 0 ;
 }
 
-.bottomNav {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: rem(24);
-}
-
 .backButton {
-  min-height: rem(48);
+  min-height: rem(36);
   padding: rem(10) rem(18);
-  border: rem(3) solid var(--color-accent-blue);
+  border: none;
   border-radius: var(--radius-md);
-  background: var(--color-white);
-  box-shadow: var(--shadow-accent-blue);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-surface-red-soft);
   color: var(--color-text-primary);
-  font-size: rem(18);
+  font-size: rem(16);
+  font-weight: 400;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -34,8 +29,37 @@
 }
 
 .backButton:hover {
-  transform: translate(-rem(1), rem(1));
-  box-shadow: var(--shadow-accent-blue);
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+  background: var(--color-white);
+}
+
+.backButton:focus-visible,
+.backButton:active {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+  background: var(--color-white);
+}
+
+.pageFooter {
+  position: fixed;
+  left: rem(20);
+  right: rem(20);
+  bottom: rem(20);
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.pageFooter > * {
+  pointer-events: auto;
+}
+
+.bottomNav {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .sectionBlock {
@@ -75,8 +99,10 @@
     padding: rem(24) rem(12);
   }
 
-  .bottomNav {
-    margin-bottom: rem(20);
+  .pageFooter {
+    left: rem(14);
+    right: rem(14);
+    bottom: rem(14);
   }
 
   .additionalButton {

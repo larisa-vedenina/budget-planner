@@ -174,12 +174,19 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             {isEditingText ? (
               <TextField
               inputRef={textInputRef}
+              autoComplete="off"
               variant="standard"
               value={editText}
               onChange={(event) => setEditText(event.target.value)}
               onBlur={handleSaveText}
               onKeyDown={(event) => handleKeyDown(event, "text")}
               fullWidth
+              name={`form-item-text-${item.id}`}
+              inputProps={{
+                autoComplete: "off",
+                autoCapitalize: "off",
+                spellCheck: false,
+              }}
               InputProps={{ disableUnderline: true }}
               sx={fieldSx("1rem")}
             />
@@ -205,13 +212,18 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             {isEditingAmount ? (
               <TextField
               inputRef={amountInputRef}
+              autoComplete="off"
               variant="standard"
               value={editAmount}
               onChange={(event) => setEditAmount(event.target.value)}
               onBlur={handleSaveAmount}
               onKeyDown={(event) => handleKeyDown(event, "amount")}
               fullWidth
-              inputProps={{ inputMode: "decimal" }}
+              name={`form-item-amount-${item.id}`}
+              inputProps={{
+                autoComplete: "off",
+                inputMode: "decimal",
+              }}
               InputProps={{ disableUnderline: true }}
               sx={fieldSx("1rem")}
             />
@@ -237,12 +249,19 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
               {isEditingComment ? (
                 <TextField
                   inputRef={commentInputRef}
+                  autoComplete="off"
                   variant="standard"
                   value={editComment}
                   onChange={(event) => setEditComment(event.target.value)}
                   onBlur={handleSaveComment}
                   onKeyDown={(event) => handleKeyDown(event, "comment")}
                   fullWidth
+                  name={`form-item-comment-${item.id}`}
+                  inputProps={{
+                    autoComplete: "off",
+                    autoCapitalize: "off",
+                    spellCheck: false,
+                  }}
                   InputProps={{ disableUnderline: true }}
                   sx={fieldSx("1rem")}
                 />

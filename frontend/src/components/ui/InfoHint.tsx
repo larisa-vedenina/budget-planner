@@ -7,6 +7,7 @@ interface InfoHintProps {
   ariaLabel: string;
   variant?: "blue" | "red" | "gray";
   autoVisible?: boolean;
+  floating?: boolean;
 }
 
 // Общая информационная подсказка для страниц с короткими инструкциями.
@@ -15,9 +16,14 @@ const InfoHint: React.FC<InfoHintProps> = ({
   ariaLabel,
   variant = "blue",
   autoVisible = false,
+  floating = true,
 }) => {
   return (
-    <div className={`${styles.wrap} ${styles[`variant${variant[0].toUpperCase()}${variant.slice(1)}`]}`}>
+    <div
+      className={`${styles.wrap} ${styles[`variant${variant[0].toUpperCase()}${variant.slice(1)}`]} ${
+        !floating ? styles.inline : ""
+      }`}
+    >
       <button type="button" className={styles.button} aria-label={ariaLabel}>
         <InfoOutlinedIcon className={styles.icon} />
       </button>

@@ -26,7 +26,7 @@ const DESKTOP_TEXT_WIDTH = pxToRem(200);
 const DESKTOP_AMOUNT_WIDTH = pxToRem(120);
 const DESKTOP_COMMENT_WIDTH = pxToRem(180);
 
-// Аккуратно парсим сумму и не даем невалидным значениям ломать форму.
+// Парсим сумму и не даем невалидным значениям ломать форму
 const parseAmountValue = (value: string | undefined): number => {
   const parsedValue = Number.parseFloat(value ?? "");
   return Number.isFinite(parsedValue) ? parsedValue : 0;
@@ -93,10 +93,17 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     [section.inputs.placeholders],
   );
   const [inputValues, setInputValues] = useState<string[]>(emptyInputValues);
+  const [isEnterHintVisible, setIsEnterHintVisible] = useState(false);
 
   useEffect(() => {
     setInputValues(emptyInputValues);
   }, [emptyInputValues]);
+
+  useEffect(() => {
+    if (section.inputs.items.length > 0) {
+      setIsEnterHintVisible(false);
+    }
+  }, [section.inputs.items.length]);
 
   // Меняем только одно поле, не пересобирая весь массив вручную снаружи.
   const handleInputChange = useCallback((index: number, value: string) => {
@@ -106,6 +113,13 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       return newValues;
     });
   }, []);
+
+  // Подсказка нужна только до первого добавленного пункта в секции.
+  const handleInputFocus = useCallback(() => {
+    if (section.inputs.items.length === 0) {
+      setIsEnterHintVisible(true);
+    }
+  }, [section.inputs.items.length]);
 
   // После добавления возвращаем фокус в первое поле секции.
   const focusFirstInput = useCallback(() => {
@@ -137,6 +151,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
         e.preventDefault();
         onChange([...section.inputs.items, createFormItem()]);
         setInputValues(section.inputs.placeholders.map(() => ""));
+        setIsEnterHintVisible(false);
         focusFirstInput();
       }
     },
@@ -233,18 +248,30 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
         {section.inputs.placeholders.map((placeholder, index) => (
           <TextField
             key={index}
+            autoComplete="off"
             placeholder={placeholder}
             value={inputValues[index]}
             onChange={(e) => handleInputChange(index, e.target.value)}
+            onFocus={handleInputFocus}
             onKeyDown={handleInputKeyDown}
             fullWidth
+            name={`budget-${section.id}-${index}`}
             inputProps={{
+              autoComplete: "off",
+              autoCapitalize: "off",
               inputMode: index === 1 ? "decimal" : "text",
+              spellCheck: index === 1 ? undefined : false,
             }}
             sx={getSectionInputSx(index)}
           />
         ))}
       </Box>
+
+      {isEnterHintVisible && section.inputs.items.length === 0 && (
+        <Box component="p" className={styles.enterHint}>
+          Заполни поля и нажми enter
+        </Box>
+      )}
 
       {section.inputs.items.map((item) => (
         <FormInputItem
