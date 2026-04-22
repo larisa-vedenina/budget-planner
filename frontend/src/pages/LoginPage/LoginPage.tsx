@@ -261,6 +261,18 @@ export const LoginPage = () => {
           </button>
         </form>
       </div>
+
+      <div className={styles.pageFooter}>
+        <div className={styles.bottomNav}>
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={() => navigate("/start")}
+          >
+            Вернуться
+          </button>
+        </div>
+      </div>
     </main>
   );
 };

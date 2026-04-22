@@ -223,11 +223,24 @@ export const ArchivePage = () => {
         </div>
       </div>
 
-      <InfoHint
-        ariaLabel="Информация об отмене удаления"
-        messages={["Отменить удаление можно сочетанием Ctrl+Z."]}
-        autoVisible={isUndoInfoAutoVisible}
-      />
+      <div className={styles.pageFooter}>
+        <div className={styles.bottomNav}>
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={() => navigate("/start")}
+          >
+            Вернуться
+          </button>
+        </div>
+
+        <InfoHint
+          ariaLabel="Информация об отмене удаления"
+          messages={["Отменить удаление можно сочетанием Ctrl+Z."]}
+          autoVisible={isUndoInfoAutoVisible}
+          floating={false}
+        />
+      </div>
     </main>
   );
 };

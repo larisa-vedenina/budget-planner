@@ -18,6 +18,53 @@
   gap: rem(14);
 }
 
+.pageFooter {
+  position: fixed;
+  left: max(rem(20), calc((100vw - #{rem(1600)}) / 2 + #{rem(20)}));
+  right: max(rem(20), calc((100vw - #{rem(1600)}) / 2 + #{rem(20)}));
+  bottom: rem(20);
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.pageFooter > * {
+  pointer-events: auto;
+}
+
+.bottomNav {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.backButton {
+  min-height: rem(36);
+  padding: rem(10) rem(18);
+  border: rem(2) solid var(--surface-blue-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-surface-blue-soft);
+  color: var(--color-text-primary);
+  font-size: rem(16);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.backButton:hover,
+.backButton:focus-visible,
+.backButton:active {
+  transform: translate(rem(3), rem(2));
+  box-shadow: none;
+  background: var(--color-white);
+}
+
 .createWrap {
   margin-top: rem(50);
 }
@@ -122,7 +169,13 @@
   color: var(--color-accent-red);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 599px) {
+  .pageFooter {
+    left: rem(14);
+    right: rem(14);
+    bottom: rem(14);
+  }
+
   .createButton,
   .budgetButton {
     min-height: rem(60);
@@ -137,5 +190,19 @@
   .deleteButton {
     top: rem(5);
     right: rem(8);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .pageFooter {
+    left: rem(16);
+    right: rem(16);
+  }
+}
+
+@media (min-width: 900px) {
+  .pageFooter {
+    left: max(rem(24), calc((100vw - #{rem(1600)}) / 2 + #{rem(24)}));
+    right: max(rem(24), calc((100vw - #{rem(1600)}) / 2 + #{rem(24)}));
   }
 }

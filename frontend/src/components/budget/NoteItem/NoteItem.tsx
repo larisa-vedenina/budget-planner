@@ -83,7 +83,7 @@ export const NoteItem: React.FC<NoteItemProps> = ({
           onKeyDown={handleKeyPress}
           onBlur={handleSave}
           className={styles.textarea}
-          placeholder="Введите текст заметки..."
+          placeholder="Напиши заметку..."
         />
       ) : (
         <Box

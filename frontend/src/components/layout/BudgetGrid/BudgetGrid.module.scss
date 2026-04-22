@@ -22,13 +22,15 @@
 
 @media (max-width: 900px) {
   .wrapper {
-    padding: rem(12);
+    padding: 0 rem(20) rem(20);
     min-height: auto;
   }
 
   .grid {
     grid-template-columns: 1fr !important;
     grid-template-rows: auto !important;
+    justify-items: center;
+    gap: rem(10);
     min-height: auto;
   }
 
@@ -36,5 +38,7 @@
     grid-column: auto !important;
     grid-row: auto !important;
     height: auto !important;
+    width: 100%;
+    align-items: center;
   }
 }

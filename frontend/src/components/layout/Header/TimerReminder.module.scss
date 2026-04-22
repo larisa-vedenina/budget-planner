@@ -10,17 +10,42 @@
 .periodText {
   font-size: rem(24);
   font-weight: 400;
+  font-family: "Roboto Condensed", sans-serif;
+  letter-spacing: 0;
   color: var(--color-text-primary);
   text-align: center;
+  white-space: nowrap;
 }
 
 .reminderText {
   min-height: rem(20);
   font-size: rem(16);
   font-weight: 400;
+  letter-spacing: 0;
   color: var(--reminder-color, var(--color-accent-red));
   text-align: center;
   animation: fadeIn 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .root {
+    align-items: center;
+  }
+
+  .periodText {
+    font-size: rem(18);
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .reminderText {
+    min-height: rem(17);
+    font-size: rem(14);
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+  }
 }
 
 @keyframes fadeIn {

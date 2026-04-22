@@ -26,6 +26,20 @@ import styles from "./BudgetCard.module.scss";
 
 const COMPLETED_ITEM_HIDE_DELAY_MS = 2000;
 
+const formatCardTitle = (value: string) => {
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return "";
+  }
+
+  const lowerCasedValue = normalizedValue.toLocaleLowerCase("ru-RU");
+  return (
+    lowerCasedValue.charAt(0).toLocaleUpperCase("ru-RU") +
+    lowerCasedValue.slice(1)
+  );
+};
+
 const moveInArray = <T,>(items: T[], oldIndex: number, newIndex: number) => {
   const updatedItems = [...items];
   const [movedItem] = updatedItems.splice(oldIndex, 1);
@@ -82,7 +96,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   onDelayedCompletedCountChange = () => {},
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [tempTitle, setTempTitle] = useState(cellTitle);
+  const [tempTitle, setTempTitle] = useState(() => formatCardTitle(cellTitle));
   const [localItems, setLocalItems] = useState<
     ChecklistItemModel[] | NoteModel[]
   >(items);
@@ -145,7 +159,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   }, [delayedCompletedIds.length, isNotesColumn, items]);
 
   useEffect(() => {
-    setTempTitle(cellTitle);
+    setTempTitle(formatCardTitle(cellTitle));
   }, [cellTitle]);
 
   useEffect(() => {
@@ -406,8 +420,13 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   );
 
   const handleTitleSave = useCallback(() => {
-    if (tempTitle.trim() && tempTitle !== cellTitle) {
-      onTitleChange(tempTitle.trim());
+    const normalizedTitle = formatCardTitle(tempTitle);
+
+    if (
+      normalizedTitle &&
+      normalizedTitle !== formatCardTitle(cellTitle)
+    ) {
+      onTitleChange(normalizedTitle);
     }
     setIsEditingTitle(false);
   }, [cellTitle, onTitleChange, tempTitle]);
@@ -415,7 +434,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   const handleTitleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleTitleSave();
     if (e.key === "Escape") {
-      setTempTitle(cellTitle);
+      setTempTitle(formatCardTitle(cellTitle));
       setIsEditingTitle(false);
     }
   };
@@ -480,7 +499,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                 isEditMode ? styles.titleEditable : ""
               }`}
             >
-              {cellTitle.toUpperCase()}
+              {formatCardTitle(cellTitle)}
             </Typography>
           )}
         </Box>
@@ -536,7 +555,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               {/* Сообщение если нет заметок */}
               {(activeItems as NoteModel[]).length === 0 && !isEditMode && (
                 <Box className={styles.emptyMessage}>
-                  <div className={styles.emptyMessageText}>Пока нет заметок</div>
+                  <div className={styles.emptyMessageText}>Пока тут нет заметок</div>
                 </Box>
               )}
             </SortableContext>

@@ -188,40 +188,40 @@ const typography: TypographyVariantsOptions = {
     "'Roboto Condensed', -apple-system, BlinkMacSystemFont, sans-serif",
   h1: {
     fontSize: pxToRem(fontSizes.display),
-    fontWeight: 500,
+    fontWeight: 400,
     lineHeight: 1.2,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
   },
   h2: {
     fontSize: pxToRem(fontSizes.base),
-    fontWeight: 500,
+    fontWeight: 400,
     lineHeight: 1.2,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
   },
   h3: {
     fontSize: pxToRem(fontSizes.base),
     fontWeight: 400,
     lineHeight: 1.2,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
   },
   body1: {
     fontSize: pxToRem(fontSizes.base),
     fontWeight: 400,
     lineHeight: 1.35,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
   },
   body2: {
     fontSize: pxToRem(fontSizes.detail),
     fontWeight: 400,
     lineHeight: 1.5,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
     color: textColors.secondary,
   },
   subtitle1: {
     fontSize: pxToRem(fontSizes.base),
-    fontWeight: 500,
+    fontWeight: 400,
     lineHeight: 1.35,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
   },
   subtitle2: {
     fontSize: pxToRem(fontSizes.base),
@@ -233,7 +233,7 @@ const typography: TypographyVariantsOptions = {
     fontSize: pxToRem(fontSizes.detail),
     fontWeight: 400,
     lineHeight: 1.4,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
     color: textColors.secondary,
   },
   button: {
@@ -241,7 +241,7 @@ const typography: TypographyVariantsOptions = {
     fontWeight: 400,
     lineHeight: 1.15,
     textTransform: "none" as const,
-    letterSpacing: "0.01em",
+    letterSpacing: "0",
   },
 };
 

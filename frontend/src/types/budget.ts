@@ -177,9 +177,9 @@ export function createDefaultBudgetPeriod(): BudgetPeriod {
       notes: '#69B5D3',     // Голубой - заметки по умолчанию
     },
     cellTitles: { // ДОБАВЛЕНО: дефолтные заголовки ячеек
-      required: 'ОБЯЗАТЕЛЬНЫЕ',
-      desired: 'НЕОБЯЗАТЕЛЬНЫЕ',
-      notes: 'ЗАМЕТКИ'
+      required: 'Обязательные',
+      desired: 'Необязательные',
+      notes: 'Заметки'
     },
     createdAt: now,
     updatedAt: now,

@@ -54,9 +54,9 @@ const getAdditionalButtonSx = (sectionColor: string) => ({
     boxShadow: "none",
   },
   fontSize: "1rem",
-  fontWeight: 500,
-  letterSpacing: "0.02em",
-  textTransform: "none",
+  fontWeight: 400,
+  letterSpacing: "0",
+  textTransform: "uppercase",
 });
 
 // Поле комментария живет отдельно от секций, поэтому держим его стили рядом со страницей.
@@ -83,10 +83,11 @@ const aiCommentSx = {
       opacity: 1,
       fontWeight: 400,
       lineHeight: 1.5,
-      letterSpacing: "0.01em",
+      letterSpacing: "0",
     },
     "& textarea::placeholder": {
       color: "#5B5B5B",
+      fontSize: pxToRem(16),
       opacity: 0.6,
     },
   },
@@ -281,7 +282,7 @@ const FormPage: React.FC = () => {
         ...fallbackBudget,
         notes: [
           NoteModel.createAINote(
-            "AI-план сейчас недоступен, поэтому создан базовый черновик бюджета. Его можно отредактировать вручную и позже пересоздать с AI.",
+            "Пока не получилось собрать AI-план, поэтому здесь базовый черновик. Можешь подправить его вручную и попробовать еще раз позже.",
           ),
           ...fallbackBudget.notes,
         ],
@@ -296,11 +297,11 @@ const FormPage: React.FC = () => {
   }, [formData, isSubmitting, loadBudget, navigate]);
 
   return (
-    <Box
+      <Box
       className={styles.page}
       sx={{
         paddingTop: { xs: pxToRem(32), md: pxToRem(40) },
-        paddingBottom: { xs: pxToRem(32), md: pxToRem(40) },
+        paddingBottom: { xs: pxToRem(112), md: pxToRem(104) },
         paddingX: { xs: pxToRem(12), sm: pxToRem(20) },
       }}
     >
@@ -359,7 +360,7 @@ const FormPage: React.FC = () => {
                   sx={getAdditionalButtonSx(sectionColor)}
                 >
                   {isAdded ? "Удалить" : "Добавить"}{" "}
-                  {DEFAULT_FORM_SECTIONS[sectionType].title.toLowerCase()}
+                  {DEFAULT_FORM_SECTIONS[sectionType].title}
                 </Button>
               );
             })}
@@ -396,7 +397,7 @@ const FormPage: React.FC = () => {
             rows={4}
             autoComplete="off"
             name="budget-ai-comment"
-            placeholder="Расскажите о ваших финансовых целях, предпочтениях или любых особых обстоятельствах..."
+            placeholder="Расскажи, что для тебя важно: цели, ограничения, крупные покупки или любые детали, которые помогут точнее собрать план..."
             value={formData.aiComment}
             onChange={handleAICommentChange}
             inputProps={{
@@ -428,7 +429,8 @@ const FormPage: React.FC = () => {
               fontSize: { xs: pxToRem(20), sm: pxToRem(24) },
               fontWeight: 400,
               lineHeight: pxToRem(28),
-              textTransform: "none",
+              textTransform: "uppercase",
+              letterSpacing: "0",
               padding: remSpace(12, 20),
               transition:
                 "transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast)",
@@ -473,9 +475,9 @@ const FormPage: React.FC = () => {
           variant="red"
           floating={false}
           messages={[
-            "Отменить последнее изменение можно сочетанием Ctrl+Z.",
-            "Новый пункт создается нажатием клавиши Enter.",
-            "В комментарии лучше добавлять больше деталей, чтобы план получился точнее.",
+            "Последнее изменение можно отменить через Ctrl+Z.",
+            "Чтобы добавить пункт, просто нажми Enter.",
+            "В комментарии лучше написать побольше деталей — так план получится точнее.",
           ]}
         />
       </div>

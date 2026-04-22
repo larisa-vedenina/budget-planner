@@ -49,7 +49,7 @@ export class ChecklistItemModel implements IChecklistItem {
   static createDefault(category: ChecklistCategory): ChecklistItemModel {
     return new ChecklistItemModel(
       `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      "На что будем тратить?", // Заголовок по умолчанию
+      "На что потратишь?", // Заголовок по умолчанию
       0, // Сумма по умолчанию
       false, // Не выполнен
       category, // Переданная категория

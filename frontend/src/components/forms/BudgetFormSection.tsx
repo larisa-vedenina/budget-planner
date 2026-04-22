@@ -75,7 +75,11 @@ const getSectionInputSx = (index: number) => ({
       opacity: 0.6,
       fontWeight: 400,
       lineHeight: 1.5,
-      letterSpacing: "0.01em",
+      letterSpacing: "0",
+    },
+    "& input::placeholder": {
+      fontSize: pxToRem(16),
+      opacity: 1,
     },
   },
 });
@@ -234,9 +238,10 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
             variant="h2"
             className={styles.title}
             sx={{
+              fontSize: pxToRem(18),
               fontWeight: 400,
-              lineHeight: 1.4,
-              letterSpacing: "0.01em",
+              lineHeight: 1.2,
+              letterSpacing: "0",
             }}
           >
             {section.title}
@@ -269,7 +274,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
 
       {isEnterHintVisible && section.inputs.items.length === 0 && (
         <Box component="p" className={styles.enterHint}>
-          Заполни поля и нажми enter
+          Заполни поля и нажми Enter
         </Box>
       )}
 

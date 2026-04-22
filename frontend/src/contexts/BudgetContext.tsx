@@ -164,9 +164,9 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
         notes: "#69B5D3" as CellColor,
       },
       cellTitles: {
-        required: "ОБЯЗАТЕЛЬНЫЕ",
-        desired: "НЕОБЯЗАТЕЛЬНЫЕ",
-        notes: "ЗАМЕТКИ",
+        required: "Обязательные",
+        desired: "Необязательные",
+        notes: "Заметки",
       },
       createdAt: new Date(),
       updatedAt: new Date(),

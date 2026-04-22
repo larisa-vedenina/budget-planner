@@ -44,10 +44,15 @@
 }
 
 .loginButton {
-  padding: rem(12) rem(20);
-  border-color: var(--color-accent-blue);
+  min-height: rem(44);
+  padding: rem(8) rem(14);
+  border: rem(2) solid var(--border-neutral);
+  box-shadow: var(--shadow-neutral-edit);
+  color: var(--color-text-primary);
   font-size: rem(16);
   font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .avatarImage {
@@ -59,7 +64,7 @@
 
 .avatarFallback {
   font-size: rem(20);
-  font-weight: 600;
+  font-weight: 400;
   text-transform: uppercase;
 }
 
@@ -69,11 +74,15 @@
   right: 0;
   width: min(rem(280), calc(100vw - #{rem(24)}));
   padding: rem(16);
-  border: rem(3) solid var(--color-accent-blue);
+  border: rem(3) solid var(--border-neutral);
   border-radius: var(--radius-md);
   background: var(--color-white);
-  box-shadow: var(--shadow-accent-blue);
+  box-shadow: var(--shadow-neutral-edit);
   z-index: 120;
+}
+
+.guestMenu {
+  padding-top: rem(12);
 }
 
 .profileInfo {
@@ -111,22 +120,37 @@
   min-height: rem(44);
   padding: rem(10) rem(12);
   text-align: center;
-  border: rem(3) solid var(--color-accent-blue);
+  border: rem(2) solid var(--border-neutral);
   border-radius: var(--radius-md);
   background: var(--color-white);
   color: var(--color-text-primary);
   font-size: rem(16);
   font-weight: 400;
-  box-shadow: var(--shadow-accent-blue);
+  text-transform: uppercase;
+  letter-spacing: 0;
+  box-shadow: var(--shadow-neutral-edit);
 }
 
 @media (max-width: 768px) {
+  .avatarButton {
+    width: rem(40);
+    min-width: rem(40);
+    min-height: rem(40);
+  }
+
+  .avatarFallback {
+    font-size: rem(16);
+  }
+
   .menu {
     right: 0;
     width: min(rem(260), calc(100vw - #{rem(24)}));
   }
 
   .loginButton {
+    min-height: rem(36);
+    padding: rem(6) rem(10);
     font-size: rem(16);
+    line-height: 1;
   }
 }

@@ -71,13 +71,46 @@ export const ProfileMenu: React.FC = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <button
-        type="button"
-        className={styles.loginButton}
-        onClick={() => navigate("/login")}
-      >
-        Войти
-      </button>
+      <div className={styles.wrapper} ref={wrapperRef}>
+        <button
+          type="button"
+          className={styles.loginButton}
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-label="Открыть меню"
+        >
+          Меню
+        </button>
+
+        {isOpen && (
+          <div className={`${styles.menu} ${styles.guestMenu}`}>
+            <div className={styles.menuActions}>
+              <button
+                type="button"
+                className={styles.menuButton}
+                onClick={() => navigateAndClose("/login")}
+              >
+                Войти в личный кабинет
+              </button>
+
+              <button
+                type="button"
+                className={styles.menuButton}
+                onClick={() => navigateAndClose("/form")}
+              >
+                Создать новый бюджет
+              </button>
+
+              <button
+                type="button"
+                className={styles.menuButton}
+                onClick={() => navigateAndClose("/start")}
+              >
+                Вернуться на главную
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 

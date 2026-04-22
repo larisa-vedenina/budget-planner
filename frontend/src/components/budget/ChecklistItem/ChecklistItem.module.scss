@@ -5,7 +5,7 @@
   width: calc(100% - rem(8));
   max-width: calc(100% - rem(8));
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: rem(12);
   background: var(--item-bg, var(--color-white));
   color: var(--color-text-primary);
@@ -14,7 +14,7 @@
   height: rem(65);
   min-height: rem(65);
   padding: rem(12) rem(15);
-  margin-bottom: rem(10);
+  margin: 0 auto rem(10);
   font-size: rem(24);
   transition:
     box-shadow var(--transition-fast),
@@ -28,6 +28,10 @@
 
 .itemEditable {
   box-shadow: var(--budget-card-shadow, var(--shadow-neutral-edit));
+}
+
+.itemReadonly {
+  gap: rem(4);
 }
 
 .itemEditable:hover {
@@ -54,11 +58,21 @@
 }
 
 .left {
-  margin-right: rem(8);
   display: flex;
   align-items: center;
+}
+
+.leftEditing {
+  margin-right: rem(8);
   gap: rem(6);
   min-width: rem(68);
+}
+
+.leftReadonly {
+  margin-right: 0;
+  gap: 0;
+  min-width: rem(24);
+  flex: 0 0 rem(24);
 }
 
 .dragHandle {
@@ -149,6 +163,10 @@
   max-width: calc(100% - rem(280));
 }
 
+.leftReadonly + .content {
+  margin-left: rem(20);
+}
+
 .textInput {
   width: 100%;
   height: rem(40);
@@ -184,6 +202,7 @@
 
 .amountWrap {
   min-width: rem(120);
+  margin-left: auto;
   text-align: right;
 }
 
@@ -268,39 +287,97 @@
 
 @media (max-width: 768px) {
   .item {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    padding: rem(12);
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: rem(8);
+    min-height: rem(50);
+    height: rem(50);
+    padding: rem(8) rem(10);
+    margin: 0 0 rem(10);
+  }
+
+  .itemEditable {
+    padding-right: rem(36);
   }
 
   .left {
     margin-right: 0;
-    min-width: rem(68);
   }
 
-  .content {
-    max-width: none;
-    min-width: 0;
-    width: calc(100% - rem(44));
+  .leftEditing {
+    gap: rem(4);
+    min-width: rem(48);
     margin-right: 0;
   }
 
-  .amountWrap {
+  .leftReadonly {
+    min-width: rem(24);
+    flex: 0 0 rem(24);
+  }
+
+  .dragHandleIcon,
+  .starActive,
+  .starInactive,
+  .deleteIcon {
+    font-size: rem(22);
+  }
+
+  .content {
     min-width: 0;
-    width: calc(100% - rem(44));
-    margin-left: rem(44);
-    text-align: left;
+    width: auto;
+    max-width: none;
+    margin-right: rem(-18);
+    min-height: rem(24);
+  }
+
+  .leftReadonly + .content {
+    margin-left: rem(8);
+  }
+
+  .textInput,
+  .textDisplay {
+    min-height: rem(24);
+    padding: 0;
+    font-size: rem(16);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .amountWrap {
+    width: auto;
+    min-width: rem(64);
+    margin-left: auto;
+    text-align: right;
   }
 
   .amountEditor,
   .amountText {
-    justify-content: flex-start;
+    min-height: rem(24);
+    justify-content: flex-end;
+    font-size: rem(16);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .amountInput,
+  .currency {
+    min-height: rem(24);
+    font-size: rem(16);
+  }
+
+  .amountInput {
+    width: rem(52);
   }
 
   .deleteWrap {
     position: absolute;
-    top: rem(8);
-    right: rem(8);
+    top: 50%;
+    right: rem(6);
+    transform: translateY(-50%);
     margin-left: 0;
   }
 }

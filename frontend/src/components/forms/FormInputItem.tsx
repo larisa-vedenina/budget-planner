@@ -199,7 +199,7 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
                 fontSize: "1rem",
                 fontWeight: 400,
                 lineHeight: 1.4,
-                letterSpacing: "0.01em",
+                letterSpacing: "0",
               }}
             >
               {item.text}

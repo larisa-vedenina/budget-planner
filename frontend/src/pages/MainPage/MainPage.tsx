@@ -147,9 +147,10 @@ export const MainPage: React.FC = () => {
       </Box>
 
       <InfoHint
+        className={styles.pageHint}
         ariaLabel="Подсказка по отмене действий"
         variant="gray"
-        messages={["Отменить действия в режиме редактирования можно сочетанием Ctrl+Z."]}
+        messages={["Последнее действие в режиме редактирования можно отменить через Ctrl+Z."]}
       />
     </div>
   );

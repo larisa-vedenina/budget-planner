@@ -13,7 +13,7 @@ export type SectionType =
 
 export interface FormInputItem {
   id: string;
-  text: string; // Название (откуда деньги/на что тратить)
+  text: string; // Название пункта
   amount: number; // Сумма
   comment?: string; // Комментарий/дата (по желанию)
 }
@@ -72,7 +72,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
       placeholders: [
         "Откуда деньги?",
         "Сколько?",
-        "Когда появятся? (по желанию)",
+        "Когда их получишь?",
       ],
       items: [],
     },
@@ -84,9 +84,9 @@ export const DEFAULT_FORM_SECTIONS: Record<
     title: "Обязательные расходы",
     inputs: {
       placeholders: [
-        "На что будешь тратить?",
+        "На что?",
         "Сколько?",
-        "Когда платить? (по желанию)",
+        "Когда платить?",
       ],
       items: [],
     },
@@ -98,9 +98,9 @@ export const DEFAULT_FORM_SECTIONS: Record<
     title: "Необязательные расходы",
     inputs: {
       placeholders: [
-        "На что будешь тратить?",
+        "На что?",
         "Сколько?",
-        "Когда платить? (по желанию)",
+        "Когда платить?",
       ],
       items: [],
     },
@@ -112,9 +112,9 @@ export const DEFAULT_FORM_SECTIONS: Record<
     title: "Активы",
     inputs: {
       placeholders: [
-        "Что у вас есть?",
-        "Сколько стоит?",
-        "Комментарий (опционально)",
+        "Что у тебя есть?",
+        "Сколько?",
+        "Что важно учесть?",
       ],
       items: [],
     },
@@ -125,7 +125,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
     id: "debts",
     title: "Долги",
     inputs: {
-      placeholders: ["Кому должны?", "Сколько?", "Когда вернуть?"],
+      placeholders: ["Кому должен?", "Сколько?", "Когда нужно вернуть?"],
       items: [],
     },
     color: "#FFE8B9",
@@ -135,7 +135,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
     id: "goals",
     title: "Цели",
     inputs: {
-      placeholders: ["На что копим?", "Сколько нужно?", "К какому сроку?"],
+      placeholders: ["На что копишь?", "Сколько?", "К какому сроку?"],
       items: [],
     },
     color: "#ABD0B7",

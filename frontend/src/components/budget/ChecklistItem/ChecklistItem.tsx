@@ -147,7 +147,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     "--priority-border-color": getPriorityBorderColor(),
     "--checkbox-color": backgroundColor,
     "--completed-strike-color": backgroundColor,
-    "--completed-strike-left": pxToRem(95),
+    "--completed-strike-left": isEditing ? pxToRem(95) : pxToRem(54),
     "--completed-strike-right": isEditing ? pxToRem(60) : pxToRem(15),
   } as React.CSSProperties;
   const parsedAmount = Number.parseFloat(tempAmount);
@@ -161,12 +161,18 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       style={containerStyle}
       className={`checklist-item ${styles.item} ${
         isEditing ? styles.itemEditable : ""
+      } ${!isEditing ? styles.itemReadonly : ""} ${
+        item.completed ? styles.itemReadonlyCompleted : ""
       } ${item.priority === "priority" ? styles.itemPriority : ""} ${
         item.completed ? styles.itemCompleted : ""
       }`}
     >
       {/* Левая часть: ручка для drag и управление пунктом */}
-      <Box className={styles.left}>
+      <Box
+        className={`${styles.left} ${
+          isEditing ? styles.leftEditing : styles.leftReadonly
+        }`}
+      >
         {isEditing && !item.completed && dragHandleProps && (
           <button
             ref={dragHandleProps.ref}
@@ -221,7 +227,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             onKeyDown={handleTitleKeyPress}
             onBlur={handleTitleSave}
             className={styles.textInput}
-            placeholder="Название пункта"
+            placeholder="Напиши пункт"
           />
         ) : (
           <div

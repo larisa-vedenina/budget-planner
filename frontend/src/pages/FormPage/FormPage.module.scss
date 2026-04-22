@@ -15,13 +15,15 @@
 .backButton {
   min-height: rem(36);
   padding: rem(10) rem(18);
-  border: none;
+  border: rem(2) solid var(--surface-red-soft);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow-surface-red-soft);
   color: var(--color-text-primary);
   font-size: rem(16);
   font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -43,9 +45,9 @@
 
 .pageFooter {
   position: fixed;
-  left: rem(20);
-  right: rem(20);
-  bottom: rem(20);
+  left: max(rem(20), calc((100vw - #{rem(1600)}) / 2 + #{rem(20)}));
+  right: max(rem(20), calc((100vw - #{rem(1600)}) / 2 + #{rem(20)}));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + #{rem(8)});
   z-index: 40;
   display: flex;
   align-items: flex-end;
@@ -70,7 +72,7 @@
 .additionalActions {
   display: flex;
   flex-wrap: wrap;
-  gap: rem(15);
+  gap: rem(10);
   margin-bottom: rem(20);
 }
 
@@ -87,14 +89,14 @@
   display: flex;
   justify-content: center;
   margin-top: rem(24);
-  margin-bottom: rem(24);
+  margin-bottom: rem(40);
 }
 
 .createButton {
   width: min(100%, rem(342));
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599px) {
   .page {
     padding: rem(24) rem(12);
   }
@@ -102,10 +104,24 @@
   .pageFooter {
     left: rem(14);
     right: rem(14);
-    bottom: rem(14);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + #{rem(6)});
   }
 
   .additionalButton {
     width: 100%;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .pageFooter {
+    left: rem(16);
+    right: rem(16);
+  }
+}
+
+@media (min-width: 900px) {
+  .pageFooter {
+    left: max(rem(24), calc((100vw - #{rem(1600)}) / 2 + #{rem(24)}));
+    right: max(rem(24), calc((100vw - #{rem(1600)}) / 2 + #{rem(24)}));
   }
 }

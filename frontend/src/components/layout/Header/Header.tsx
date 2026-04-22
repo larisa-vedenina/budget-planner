@@ -3,7 +3,7 @@ import { BudgetPeriod } from "../../../types/budget";
 import LockToggle from "../../ui/LockToggle";
 import TimerReminder from "./TimerReminder";
 import ProfileMenu from "./ProfileMenu";
-import { Box } from "@mui/material";
+import { Box, useMediaQuery } from "@mui/material";
 import { useBudget } from "../../../contexts/BudgetContext";
 import { calculateCompletedExpenses } from "../../../types/budget";
 import DateRangePicker from "../../forms/DateRangePicker";
@@ -21,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleEditMode,
 }) => {
   const { updateBudgetIncome, updatePeriod } = useBudget();
+  const isMobile = useMediaQuery("(max-width:768px)");
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [tempBudget, setTempBudget] = useState(budget.totalIncome.toString());
@@ -38,7 +39,13 @@ export const Header: React.FC<HeaderProps> = ({
   const remaining = budget.totalIncome - completedExpenses;
   const hasCompletedItems = completedExpenses > 0;
   const budgetTextColor = hasCompletedItems ? "#5B5B5B" : "#0D0D0D";
-  const budgetFontSize = hasCompletedItems ? "24px" : "32px";
+  const budgetFontSize = isMobile
+    ? hasCompletedItems
+      ? "18px"
+      : "24px"
+    : hasCompletedItems
+      ? "24px"
+      : "32px";
   const formattedBudget = budget.totalIncome.toLocaleString("ru-RU");
   const remainingText = hasCompletedItems
     ? `Осталось: ${remaining.toLocaleString("ru-RU")}₽`
@@ -185,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({
                 color: budgetTextColor,
               }}
               onClick={handleBudgetClick}
-              title={isEditMode ? "Кликните для редактирования бюджета" : ""}
+              title={isEditMode ? "Нажми, чтобы изменить бюджет" : ""}
             >
               <span className={styles.budgetLabel}>{"Бюджет:\u00A0"}</span>
               <span className={styles.budgetValueStatic}>{formattedBudget}</span>
@@ -196,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`${styles.remainingText} ${
                 !hasCompletedItems ? styles.remainingTextHidden : ""
               }`}
-              style={{ fontSize: "32px", fontWeight: 400 }}
+              style={{ fontSize: isMobile ? "24px" : "32px", fontWeight: 400 }}
               aria-hidden={!hasCompletedItems}
             >
               {remainingText}
@@ -228,7 +235,11 @@ export const Header: React.FC<HeaderProps> = ({
       </Box>
 
       <Box className={styles.actionsBlock}>
-        <LockToggle isLocked={!isEditMode} onToggle={onToggleEditMode} />
+        <LockToggle
+          isLocked={!isEditMode}
+          onToggle={onToggleEditMode}
+          size={isMobile ? "small" : "medium"}
+        />
         <ProfileMenu />
       </Box>
     </header>
