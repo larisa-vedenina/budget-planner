@@ -1,11 +1,10 @@
-// components/ui/LockToggle/LockToggle.tsx
 import React from 'react';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import styles from "./LockToggle.module.scss";
 
 interface LockToggleProps {
-  isLocked: boolean; // true = режим просмотра, false = режим редактирования
+  isLocked: boolean;
   onToggle: () => void;
   size?: 'small' | 'medium' | 'large';
 }
@@ -15,7 +14,6 @@ export const LockToggle: React.FC<LockToggleProps> = ({
   onToggle,
   size = 'medium',
 }) => {
-  // Размеры в зависимости от пропса size
   const sizeMap = {
     small: { icon: 24, button: 40 },
     medium: { icon: 32, button: 43 },

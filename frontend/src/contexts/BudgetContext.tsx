@@ -40,7 +40,6 @@ interface BudgetContextType {
   isEditMode: boolean;
   toggleEditMode: () => void;
 
-  // Работа с пунктами
   addItem: (item: ChecklistItemModel, category: "required" | "desired") => void;
   updateItem: (item: ChecklistItemModel) => void;
   deleteItem: (id: string, category: "required" | "desired") => void;
@@ -51,40 +50,32 @@ interface BudgetContextType {
     toCategory: "required" | "desired",
   ) => void;
 
-  // Работа с заметками
   addNote: (note: NoteModel) => void;
   updateNote: (note: NoteModel) => void;
   deleteNote: (id: string) => void;
 
-  // Цвета
   updateColor: (
     cellType: "required" | "desired" | "notes",
     color: CellColor,
   ) => void;
 
-  // Работа с бюджетом и периодом
   updateBudgetIncome: (newIncome: number) => void;
   updatePeriod: (startDate: Date, endDate: Date) => void;
 
-  // Работа с заголовками
   updateTitle: (
     category: "required" | "desired" | "notes",
     newTitle: string,
   ) => void;
 
-  // Загрузка/сохранение
   loadBudget: (budget: BudgetPeriod) => void;
   createNewBudget: () => void;
   saveBudget: () => void;
-  clearStorage: () => void;
 
-  // Undo/Redo
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
 
-  // Drag & Drop
   reorderItems: (
     category: "required" | "desired" | "notes",
     oldIndex: number,
@@ -128,7 +119,6 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     setHistoryIndex(0);
   }, []);
 
-  // Базовое состояние нужно, если сохраненного бюджета пока нет.
   const fallbackBudget = useMemo<BudgetPeriod>(
     () => ({
       id: "default_1",
@@ -689,18 +679,6 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     saveToStorage();
   };
 
-  const clearStorage = () => {
-    clearBudgetStorage();
-
-    if (isAuthenticated) {
-      void saveRemoteBudgetSnapshot(getBudgetSnapshot()).catch((error) => {
-        console.error("Не удалось очистить бюджет на сервере:", error);
-      });
-    }
-
-    window.location.reload();
-  };
-
   const value: BudgetContextType = {
     currentBudget: currentBudget || fallbackBudget,
     isEditMode,
@@ -720,7 +698,6 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     loadBudget,
     createNewBudget,
     saveBudget,
-    clearStorage,
     undo,
     redo,
     canUndo: historyIndex > 0,

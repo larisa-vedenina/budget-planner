@@ -9,8 +9,6 @@ interface AdditionalSectionProps {
   section: FormSection;
   onChange: (items: FormInputItem[]) => void;
 }
-
-// Дополнительная секция — это та же форма, но в собственной цветной карточке.
 const AdditionalSection: React.FC<AdditionalSectionProps> = ({
   section,
   onChange,

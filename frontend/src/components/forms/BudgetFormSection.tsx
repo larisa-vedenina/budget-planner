@@ -25,14 +25,10 @@ interface BudgetFormSectionProps {
 const DESKTOP_TEXT_WIDTH = pxToRem(200);
 const DESKTOP_AMOUNT_WIDTH = pxToRem(120);
 const DESKTOP_COMMENT_WIDTH = pxToRem(180);
-
-// Парсим сумму и не даем невалидным значениям ломать форму
 const parseAmountValue = (value: string | undefined): number => {
   const parsedValue = Number.parseFloat(value ?? "");
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 };
-
-// Все обычные поля секций используют один и тот же визуальный шаблон.
 const getSectionInputSx = (index: number) => ({
   flexGrow: index === 2 ? 1 : 0,
   flexShrink: 1,
@@ -108,8 +104,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       setIsEnterHintVisible(false);
     }
   }, [section.inputs.items.length]);
-
-  // Меняем только одно поле, не пересобирая весь массив вручную снаружи.
   const handleInputChange = useCallback((index: number, value: string) => {
     setInputValues((prev) => {
       const newValues = [...prev];
@@ -117,15 +111,11 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       return newValues;
     });
   }, []);
-
-  // Подсказка нужна только до первого добавленного пункта в секции.
   const handleInputFocus = useCallback(() => {
     if (section.inputs.items.length === 0) {
       setIsEnterHintVisible(true);
     }
   }, [section.inputs.items.length]);
-
-  // После добавления возвращаем фокус в первое поле секции.
   const focusFirstInput = useCallback(() => {
     setTimeout(() => {
       const inputs = document.querySelectorAll(
@@ -136,8 +126,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       }
     }, 10);
   }, [section.id]);
-
-  // Собираем новый пункт из текущих значений строки ввода.
   const createFormItem = useCallback(
     (): FormInputItemType => ({
       id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
@@ -147,8 +135,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     }),
     [inputValues],
   );
-
-  // Добавляем пункт по Enter и очищаем строку ввода.
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && inputValues[0]?.trim()) {
@@ -168,8 +154,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       onChange,
     ],
   );
-
-  // Удаляем пункт по id без изменений остальных элементов.
   const handleRemoveItem = useCallback(
     (itemId: string) => {
       const updatedItems = section.inputs.items.filter(
@@ -179,8 +163,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     },
     [section.inputs.items, onChange],
   );
-
-  // Точечно обновляем редактируемый пункт.
   const handleUpdateItem = useCallback(
     (itemId: string, updates: Partial<FormInputItemType>) => {
       const updatedItems = section.inputs.items.map((item) =>
@@ -190,8 +172,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     },
     [section.inputs.items, onChange],
   );
-
-  // Период рендерится отдельно, потому что вместо строки ввода там календарь.
   if (section.id === "period") {
     return (
       <Box
@@ -217,8 +197,6 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       </Box>
     );
   }
-
-  // Остальные секции используют одинаковую структуру: заголовок, строка ввода и список пунктов.
   return (
     <Box
       className={`${styles.section} ${isNested ? styles.nested : ""}`}

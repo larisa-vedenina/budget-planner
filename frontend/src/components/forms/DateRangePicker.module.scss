@@ -1,13 +1,13 @@
 @use "../../styles/functions" as *;
 
-/* Контейнер поля периода и выпадающего календаря. */
+
 .pickerWrap {
   display: flex;
   flex-direction: column;
   gap: rem(12);
 }
 
-/* Триггер выглядит как обычное поле формы, но открывает popover. */
+
 .trigger {
   min-height: rem(50);
   height: rem(50);
@@ -55,7 +55,7 @@
   box-shadow: var(--shadow-accent-red);
 }
 
-/* Внутри popover оставляем только календарь без лишних декоративных слоев. */
+
 .calendarCard {
   display: flex;
   justify-content: center;

@@ -1,30 +1,23 @@
-// Типы для API-запросов
 
 import { FormInputItem } from "./form";
 import { User } from "./user";
 
-/**
- * Базовый интерфейс для API-ответов
- */
+
 export interface ApiResponse<T> {
-  data: T; // Полезные данные
-  success: boolean; // Успешность операции
-  message?: string; // Сообщение (опционально)
-  timestamp: string; // Время ответа
+  data: T;
+  success: boolean;
+  message?: string;
+  timestamp: string;
 }
 
-/**
- * Интерфейс для ошибок API
- */
+
 export interface ApiError {
-  code: string; // Код ошибки
-  message: string;   // Сообщение об ошибке
-  details?: any;     // Детали ошибки (опционально)
+  code: string;
+  message: string;
+  details?: any;
 }
 
-/**
- * Запрос на создание бюджета
- */
+
 export interface CreateBudgetRequest {
   period: {
     startDate: Date;
@@ -45,12 +38,10 @@ export interface CreateBudgetRequest {
     amount: number;
     paymentDate?: string;
   }>;
-  commentForAI?: string; // Комментарий для генерации AI-советов
+  commentForAI?: string;
 }
 
-/**
- * Запрос на обновление цветов ячеек
- */
+
 export interface UpdateColorsRequest {
   budgetId: string;
   colors: {
@@ -60,9 +51,7 @@ export interface UpdateColorsRequest {
   };
 }
 
-/**
- * Запрос на перемещение пункта между категориями
- */
+
 export interface MoveItemRequest {
   itemId: string;
   fromCategory: 'required' | 'desired';

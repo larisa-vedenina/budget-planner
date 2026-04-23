@@ -13,8 +13,6 @@ import {
 } from "../../utils/budgetStorage";
 import { saveRemoteBudgetSnapshot } from "../../services/budgetSyncService";
 import styles from "./ArchivePage.module.scss";
-
-// Получаем дату в формате "1 ноября" с правильным падежом месяца.
 const formatDayAndMonth = (date: Date): string =>
   date.toLocaleDateString("ru-RU", {
     day: "numeric",

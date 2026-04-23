@@ -1,9 +1,0 @@
-@use "../../styles/functions" as *;
-
-.card {
-  padding: rem(20);
-  border: rem(3) solid var(--card-border, var(--color-accent-red));
-  border-radius: var(--radius-md);
-  background: var(--color-white);
-  box-shadow: var(--card-shadow, var(--shadow-neutral-edit));
-}

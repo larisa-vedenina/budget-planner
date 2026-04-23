@@ -25,11 +25,10 @@ export const MainPage: React.FC = () => {
     deleteNote,
     updateColor,
     updateTitle,
-    clearStorage,
     reorderItems,
     moveItemBetweenCategories,
   } = useBudget();
-  // Вспомогательные обработчики (если нужны)
+
   const handleItemUpdate = (
     item: ChecklistItemModel,
     category: "required" | "desired",
@@ -83,17 +82,6 @@ export const MainPage: React.FC = () => {
     moveItemBetweenCategories(itemId, fromCategory, toCategory);
   };
 
-  // Функция для сброса данных
-  const handleResetData = () => {
-    if (
-      window.confirm(
-        "Вы уверены, что хотите сбросить все данные? Это удалит все сохраненные изменения.",
-      )
-    ) {
-      clearStorage();
-    }
-  };
-
   if (!currentBudget) {
     return (
       <div className={styles.emptyState}>
@@ -106,14 +94,6 @@ export const MainPage: React.FC = () => {
             onClick={() => navigate("/form")}
           >
             Создать новый бюджет
-          </button>
-
-          <button
-            type="button"
-            className={styles.secondaryAction}
-            onClick={handleResetData}
-          >
-            Сбросить все данные (отладка)
           </button>
         </div>
       </div>

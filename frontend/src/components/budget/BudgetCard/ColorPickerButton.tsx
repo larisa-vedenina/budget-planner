@@ -23,22 +23,20 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
   };
 
   const open = Boolean(anchorEl);
-
-  // 8 цветов 
   const availableColors: CellColor[] = [
-    "#D87B7B", // Красный (темный)
-    "#507B5D", // Зеленый (темный)
-    "#69B5D3", // Голубой
-    "#FCD688", // Желтый (светлый)
-    "#FFDFDF", // Светло-красный (светлый)
-    "#ABD0B7", // Светло-зеленый (светлый)
-    "#CAEEFC", // Светло-голубой (светлый)
-    "#FFE8B9", // Светло-желтый (светлый)
+    "#D87B7B",
+    "#507B5D",
+    "#69B5D3",
+    "#FCD688",
+    "#FFDFDF",
+    "#ABD0B7",
+    "#CAEEFC",
+    "#FFE8B9",
   ];
 
   return (
     <>
-      {/* Кнопка выбора цвета */}
+
       <button
         onClick={handleClick}
         className={styles.trigger}
@@ -51,7 +49,7 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
         title="Изменить цвет фона"
       />
 
-      {/* Поповер с выбором цвета */}
+
       <Popover
         open={open}
         anchorEl={anchorEl}

@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { NoteModel } from "../../types/note";
 import NoteItem from "./NoteItem/NoteItem";
-import { Box } from "@mui/material"; // Импортируем Box из MUI
+import { Box } from "@mui/material";
 
 interface SortableNoteItemProps {
   note: NoteModel;

@@ -20,16 +20,12 @@ export const NoteItem: React.FC<NoteItemProps> = ({
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [tempContent, setTempContent] = useState(note.content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Обработчик сохранения заметки
   const handleSave = useCallback(() => {
     if (tempContent.trim() && tempContent !== note.content) {
       onUpdate(note.updateContent(tempContent.trim()));
     }
     setIsEditingContent(false);
   }, [note, onUpdate, tempContent]);
-
-  // Обработчик нажатия клавиш
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -40,16 +36,12 @@ export const NoteItem: React.FC<NoteItemProps> = ({
       setIsEditingContent(false);
     }
   };
-
-  // Фокус на textarea при начале редактирования
   useEffect(() => {
     if (isEditingContent && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
     }
   }, [isEditingContent]);
-
-  // Клик вне поля ввода
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -96,12 +88,12 @@ export const NoteItem: React.FC<NoteItemProps> = ({
         </Box>
       )}
 
-      {/* Подпись заметки */}
+
       <Box className={styles.signature}>
         <div className={styles.signatureText}>{note.getSignature()}</div>
       </Box>
 
-      {/* Кнопка удаления (только в режиме редактирования) */}
+
       {isEditing && (
         <Box className={styles.deleteWrap}>
           <Box

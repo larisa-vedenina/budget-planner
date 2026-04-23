@@ -1,6 +1,4 @@
-/**
- * Типы для формы ввода бюджета
- */
+
 
 export type SectionType =
   | "period"
@@ -13,9 +11,9 @@ export type SectionType =
 
 export interface FormInputItem {
   id: string;
-  text: string; // Название пункта
-  amount: number; // Сумма
-  comment?: string; // Комментарий/дата (по желанию)
+  text: string;
+  amount: number;
+  comment?: string;
 }
 
 export interface FormSection {

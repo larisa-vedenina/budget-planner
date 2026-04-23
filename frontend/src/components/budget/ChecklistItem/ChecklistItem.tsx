@@ -40,19 +40,13 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
-
-  // Определяем цвет обводки для приоритетного пункта
   const getPriorityBorderColor = (): string => {
     const darkCellColors = ["#D87B7B", "#507B5D", "#69B5D3"];
     return darkCellColors.includes(backgroundColor) ? "#FFDFDF" : "#D87B7B";
   };
-
-  // Если пункт выполнен, НЕ показываем звездочку в режиме редактирования
   const shouldShowPriorityStar = () => {
     return isEditing && !item.completed;
   };
-
-  // Обработчик сохранения названия
   const handleTitleSave = useCallback(() => {
     const nextTitle = tempTitle.trim();
 
@@ -62,8 +56,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     }
     setIsEditingTitle(false);
   }, [item, onUpdate, tempTitle]);
-
-  // Обработчик сохранения суммы
   const handleAmountSave = useCallback(() => {
     const amount = parseFloat(tempAmount);
     if (!isNaN(amount) && amount >= 0 && amount !== item.amount) {
@@ -72,8 +64,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     }
     setIsEditingAmount(false);
   }, [item, onUpdate, tempAmount]);
-
-  // Обработчик нажатия клавиш
   const handleTitleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleTitleSave();
     if (e.key === "Escape") {
@@ -89,8 +79,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       setIsEditingAmount(false);
     }
   };
-
-  // Обработчик клика вне поля ввода
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -115,8 +103,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [handleAmountSave, handleTitleSave, isEditingAmount, isEditingTitle]);
-
-  // Фокус на инпут при начале редактирования
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
@@ -125,8 +111,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       amountInputRef.current.focus();
     }
   }, [isEditingTitle, isEditingAmount]);
-
-  // Синхронизируем локальное отображение после внешних обновлений, но не мешаем живому редактированию.
   useEffect(() => {
     if (!isEditingTitle) {
       setTempTitle(item.title);
@@ -167,7 +151,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         item.completed ? styles.itemCompleted : ""
       }`}
     >
-      {/* Левая часть: ручка для drag и управление пунктом */}
+
       <Box
         className={`${styles.left} ${
           isEditing ? styles.leftEditing : styles.leftReadonly
@@ -187,7 +171,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
 
         {shouldShowPriorityStar() ? (
-          // В режиме редактирования для невыполненных - звездочка приоритета
           <div
             onClick={togglePriority}
             className={styles.iconButton}
@@ -204,7 +187,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             )}
           </div>
         ) : (
-          // Для выполненных или в режиме просмотра - чекбокс
           <div
             onClick={() => onToggle(item.id)}
             className={`${styles.checkbox} ${
@@ -216,7 +198,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-      {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ: название пункта - только для редактирования текста */}
+
       <Box className={styles.content}>
         {isEditing && isEditingTitle ? (
           <input
@@ -241,7 +223,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-      {/* ПРАВАЯ ЧАСТЬ: сумма - только для редактирования */}
+
       <Box
         className={`${styles.amountWrap} ${
           isEditing ? styles.amountWrapEditing : ""
@@ -273,7 +255,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-      {/* Кнопка удаления (только в режиме редактирования) */}
+
       {isEditing && (
         <Box className={styles.deleteWrap}>
           <div
