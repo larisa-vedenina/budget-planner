@@ -336,7 +336,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (window.location.pathname !== "/main") {
+      if (!window.location.pathname.endsWith("/main")) {
         return;
       }
 

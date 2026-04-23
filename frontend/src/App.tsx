@@ -9,7 +9,7 @@ import './styles/global.scss';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={process.env.PUBLIC_URL || "/"}>
       <AuthProvider>
         <MuiThemeProvider theme={theme}>
           <GlobalStyles styles={{ ":root": cssVariables }} />
