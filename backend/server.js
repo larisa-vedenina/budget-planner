@@ -11,6 +11,10 @@ const DEFAULT_PROVIDER = "deepseek";
 const DEFAULT_MODEL = "deepseek-chat";
 const DEFAULT_ALLOWED_ORIGIN = "http://localhost:3000";
 const DEFAULT_AUTH_COOKIE_NAME = "budget_planner_session";
+const DEFAULT_DATABASE_POOL_MAX = 5;
+const DEFAULT_DATABASE_CONNECTION_TIMEOUT_MS = 10_000;
+const DEFAULT_DATABASE_IDLE_TIMEOUT_MS = 30_000;
+const DATABASE_SCHEMA_VERSION = "2026_05_07_001_budget_snapshot_storage";
 const OTP_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
@@ -80,6 +84,83 @@ const loadEnvFile = () => {
 
 loadEnvFile();
 
+const getIntegerEnv = (key, fallbackValue) => {
+  const parsedValue = Number.parseInt(process.env[key] || "", 10);
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
+};
+
+const parseDatabaseSsl = () => {
+  const rawValue = String(process.env.DATABASE_SSL || "").trim().toLowerCase();
+
+  if (["true", "require", "required"].includes(rawValue)) {
+    return true;
+  }
+
+  if (["false", "disable", "disabled"].includes(rawValue)) {
+    return false;
+  }
+
+  return Boolean(process.env.RENDER);
+};
+
+const getDatabaseUrlError = (databaseUrl) => {
+  if (!databaseUrl) {
+    return "";
+  }
+
+  try {
+    const protocol = new URL(databaseUrl).protocol;
+
+    if (!["postgres:", "postgresql:"].includes(protocol)) {
+      return "DATABASE_URL должен быть PostgreSQL connection string: postgres:// или postgresql://.";
+    }
+  } catch (error) {
+    return "DATABASE_URL некорректен. Проверьте строку подключения к PostgreSQL.";
+  }
+
+  return "";
+};
+
+const getDatabaseHost = (databaseUrl) => {
+  if (!databaseUrl) {
+    return "";
+  }
+
+  try {
+    return new URL(databaseUrl).hostname.toLowerCase();
+  } catch (error) {
+    return "";
+  }
+};
+
+const detectDatabaseProvider = (databaseUrl) => {
+  const host = getDatabaseHost(databaseUrl);
+
+  if (!host) {
+    return "not_configured";
+  }
+
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "local-postgres";
+  }
+
+  if (host.includes("neon.tech")) {
+    return "neon";
+  }
+
+  if (host.includes("supabase.co") || host.includes("pooler.supabase.com")) {
+    return "supabase";
+  }
+
+  if (host.includes("render.com")) {
+    return "render-postgres";
+  }
+
+  return "postgres";
+};
+
 const config = {
   provider: process.env.LLM_PROVIDER || DEFAULT_PROVIDER,
   host: process.env.HOST || (process.env.RENDER ? "0.0.0.0" : "127.0.0.1"),
@@ -96,9 +177,19 @@ const config = {
     DEFAULT_MODEL,
   allowedOrigin: process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN,
   databaseUrl: process.env.DATABASE_URL || "",
-  databaseSsl:
-    process.env.DATABASE_SSL === "true" ||
-    (process.env.DATABASE_SSL !== "false" && Boolean(process.env.RENDER)),
+  databaseSsl: parseDatabaseSsl(),
+  databasePoolMax: getIntegerEnv(
+    "DATABASE_POOL_MAX",
+    DEFAULT_DATABASE_POOL_MAX,
+  ),
+  databaseConnectionTimeoutMs: getIntegerEnv(
+    "DATABASE_CONNECTION_TIMEOUT_MS",
+    DEFAULT_DATABASE_CONNECTION_TIMEOUT_MS,
+  ),
+  databaseIdleTimeoutMs: getIntegerEnv(
+    "DATABASE_IDLE_TIMEOUT_MS",
+    DEFAULT_DATABASE_IDLE_TIMEOUT_MS,
+  ),
   authCookieName: process.env.AUTH_COOKIE_NAME || DEFAULT_AUTH_COOKIE_NAME,
   cookieSecure:
     process.env.COOKIE_SECURE === "true" ||
@@ -108,12 +199,24 @@ const config = {
   twilioVerifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "",
 };
 
-const pool = config.databaseUrl
+config.databaseUrlError = getDatabaseUrlError(config.databaseUrl);
+config.databaseProvider = detectDatabaseProvider(config.databaseUrl);
+
+const pool = config.databaseUrl && !config.databaseUrlError
   ? new Pool({
       connectionString: config.databaseUrl,
       ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
+      max: config.databasePoolMax,
+      connectionTimeoutMillis: config.databaseConnectionTimeoutMs,
+      idleTimeoutMillis: config.databaseIdleTimeoutMs,
     })
   : null;
+
+if (pool) {
+  pool.on("error", (error) => {
+    console.error("[budget-planner-backend] Database pool error:", error.message);
+  });
+}
 
 const twilioClient =
   config.twilioAccountSid &&
@@ -398,6 +501,10 @@ const hashToken = (token) =>
   crypto.createHash("sha256").update(String(token)).digest("hex");
 
 const requireDatabase = () => {
+  if (config.databaseUrlError) {
+    throw createHttpError(config.databaseUrlError, 500);
+  }
+
   if (!pool) {
     throw createHttpError("База данных не настроена. Добавьте DATABASE_URL.", 500);
   }
@@ -418,6 +525,15 @@ const ensureDatabaseSchema = async () => {
   }
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    INSERT INTO schema_migrations (id)
+    VALUES ('${DATABASE_SCHEMA_VERSION}')
+    ON CONFLICT (id) DO NOTHING;
+
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -451,6 +567,20 @@ const ensureDatabaseSchema = async () => {
       edit_mode BOOLEAN NOT NULL DEFAULT FALSE,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE INDEX IF NOT EXISTS budget_snapshots_updated_at_idx
+      ON budget_snapshots (updated_at DESC);
+  `);
+};
+
+const deleteExpiredSessions = async () => {
+  if (!pool) {
+    return;
+  }
+
+  await pool.query(`
+    DELETE FROM auth_sessions
+    WHERE expires_at <= NOW()
   `);
 };
 
@@ -983,13 +1113,18 @@ const verifyPhoneCode = async (normalizedPhone, code) => {
 
 const handleHealthRequest = async (request, response) => {
   let databaseStatus = "not_configured";
+  let databaseMessage;
 
-  if (pool) {
+  if (config.databaseUrlError) {
+    databaseStatus = "error";
+    databaseMessage = config.databaseUrlError;
+  } else if (pool) {
     try {
       await pool.query("SELECT 1");
       databaseStatus = "ok";
     } catch (error) {
       databaseStatus = "error";
+      databaseMessage = error.message;
     }
   }
 
@@ -1001,6 +1136,14 @@ const handleHealthRequest = async (request, response) => {
       model: config.model,
       hasApiKey: Boolean(config.apiKey),
       databaseStatus,
+      database: {
+        status: databaseStatus,
+        provider: config.databaseProvider,
+        ssl: config.databaseSsl ? "enabled" : "disabled",
+        poolMax: config.databasePoolMax,
+        schemaVersion: DATABASE_SCHEMA_VERSION,
+        message: databaseMessage,
+      },
       authProvider: twilioClient ? "twilio-verify" : "not_configured",
     },
     timestamp: new Date().toISOString(),
@@ -1272,6 +1415,7 @@ const initializeDatabaseSchema = async () => {
 
   try {
     await ensureDatabaseSchema();
+    await deleteExpiredSessions();
     console.log("[budget-planner-backend] Database schema is ready.");
   } catch (error) {
     console.error(
@@ -1294,9 +1438,15 @@ const startServer = async () => {
     }
 
     if (!pool) {
-      console.warn(
-        "[budget-planner-backend] DATABASE_URL is missing. Real user accounts and remote budget sync will be unavailable.",
-      );
+      if (config.databaseUrlError) {
+        console.warn(
+          `[budget-planner-backend] ${config.databaseUrlError} Real user accounts and remote budget sync will be unavailable.`,
+        );
+      } else {
+        console.warn(
+          "[budget-planner-backend] DATABASE_URL is missing. Real user accounts and remote budget sync will be unavailable.",
+        );
+      }
     }
 
     if (!twilioClient) {

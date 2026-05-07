@@ -1,7 +1,3 @@
-databases:
-  - name: budget-planner-db
-    plan: free
-
 services:
   - type: web
     name: budget-planner
@@ -21,11 +17,15 @@ services:
       - key: ALLOWED_ORIGIN
         value: "*"
       - key: DATABASE_URL
-        fromDatabase:
-          name: budget-planner-db
-          property: connectionString
+        sync: false
       - key: DATABASE_SSL
         value: "true"
+      - key: DATABASE_POOL_MAX
+        value: "5"
+      - key: DATABASE_CONNECTION_TIMEOUT_MS
+        value: "10000"
+      - key: DATABASE_IDLE_TIMEOUT_MS
+        value: "30000"
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: TWILIO_ACCOUNT_SID
