@@ -21,6 +21,10 @@ const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
+const SIMPLE_AI_NOTES_LIMIT = 2;
+const DEFAULT_AI_NOTES_LIMIT = 4;
+const RICH_AI_NOTES_LIMIT = 5;
+const MAX_AI_WARNINGS = 2;
 const DEEPSEEK_CHAT_COMPLETIONS_URL = "https://api.deepseek.com/chat/completions";
 const GEMINI_GENERATE_CONTENT_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta";
@@ -28,7 +32,7 @@ const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 const FRONTEND_BUILD_DIR = path.resolve(__dirname, "../frontend/build");
 
 const BUDGET_PLAN_EXAMPLE = {
-  summary: "Короткий общий вывод по бюджету пользователя.",
+  summary: "У тебя остается 37000 ₽ после обязательных и необязательных расходов.",
   totals: {
     incomeTotal: 120000,
     requiredTotal: 65000,
@@ -41,21 +45,29 @@ const BUDGET_PLAN_EXAMPLE = {
       amount: 35000,
       priority: true,
     },
+    {
+      title: "Еда и быт",
+      amount: 22000,
+      priority: true,
+    },
+    {
+      title: "Платеж по долгу",
+      amount: 8000,
+      priority: true,
+    },
   ],
   desiredItems: [
     {
-      title: "Кафе",
-      amount: 5000,
+      title: "Цель",
+      amount: 18000,
       priority: false,
     },
   ],
   notes: [
-    "Держите резерв на непредвиденные траты.",
-    "Необязательные расходы лучше ограничить фиксированным лимитом.",
+    "На еду, транспорт и бытовые мелочи заложено 22000 ₽, это около 710 ₽ в день.",
+    "На цель можно отложить 18000 ₽ сейчас и оставить 37000 ₽ резервом.",
   ],
-  warnings: [
-    "Если доход задержится, часть необязательных трат придется сократить.",
-  ],
+  warnings: [],
 };
 
 const loadEnvFile = () => {
@@ -935,21 +947,126 @@ const saveBudgetSnapshotForUser = async (userId, snapshot) => {
 const sumAmounts = (items = []) =>
   items.reduce((sum, item) => sum + Math.max(0, Number(item.amount) || 0), 0);
 
+const parseBudgetDate = (value) => {
+  const date = new Date(`${String(value || "").slice(0, 10)}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getPeriodDays = (period = {}) => {
+  const startDate = parseBudgetDate(period.startDate);
+  const endDate = parseBudgetDate(period.endDate);
+
+  if (!startDate || !endDate || endDate < startDate) {
+    return 0;
+  }
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.round((endDate.getTime() - startDate.getTime()) / dayMs) + 1;
+};
+
+const hasMeaningfulInputItem = (item = {}) =>
+  Boolean(
+    normalizeAiText(item.text) ||
+      normalizeAiText(item.comment) ||
+      Math.max(0, Number(item.amount) || 0) > 0,
+  );
+
+const getMeaningfulItems = (items = []) =>
+  Array.isArray(items) ? items.filter(hasMeaningfulInputItem) : [];
+
+const countMeaningfulItems = (sections = {}) =>
+  Object.values(sections).reduce(
+    (count, items) => count + getMeaningfulItems(items).length,
+    0,
+  );
+
+const getContextItemsCount = (sections = {}) =>
+  ["assets", "debts", "goals"].reduce(
+    (count, key) => count + getMeaningfulItems(sections[key]).length,
+    0,
+  );
+
+const getAiNotesLimit = (payload = {}) => {
+  const meaningfulItemsCount = countMeaningfulItems(payload.sections);
+  const contextItemsCount = getContextItemsCount(payload.sections);
+
+  if (meaningfulItemsCount <= 4 && contextItemsCount === 0) {
+    return SIMPLE_AI_NOTES_LIMIT;
+  }
+
+  if (meaningfulItemsCount <= 8 && contextItemsCount <= 1) {
+    return DEFAULT_AI_NOTES_LIMIT;
+  }
+
+  return RICH_AI_NOTES_LIMIT;
+};
+
+const hasExpenseMatch = (items = [], pattern) =>
+  getMeaningfulItems(items).some((item) =>
+    pattern.test(`${item.text || ""} ${item.comment || ""}`.toLowerCase()),
+  );
+
+const hasEverydayExpenses = (sections = {}) => {
+  const everydayExpensePattern =
+    /(еда|продукт|питан|обед|ужин|кафе|кофе|транспорт|проезд|метро|автобус|такси|бензин|топлив|быт|аптек|лекарств)/i;
+  return hasExpenseMatch(
+    [...(sections.required || []), ...(sections.desired || [])],
+    everydayExpensePattern,
+  );
+};
+
+const hasReplacementCharacter = (value) => String(value || "").includes("\uFFFD");
+
+const normalizeAiText = (value, options = {}) => {
+  const rawValue = String(value || "");
+
+  if (options.dropInvalid && hasReplacementCharacter(rawValue)) {
+    return "";
+  }
+
+  return rawValue
+    .normalize("NFC")
+    .replace(/\uFFFD+/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/[ \t\r\n]+/g, " ")
+    .trim();
+};
+
+const normalizeAiTextList = (items = [], limit) => {
+  const seenNotes = new Set();
+
+  return items
+    .map((item) => normalizeAiText(item, { dropInvalid: true }))
+    .filter(Boolean)
+    .filter((item) => {
+      const key = item.toLowerCase();
+
+      if (seenNotes.has(key)) {
+        return false;
+      }
+
+      seenNotes.add(key);
+      return true;
+    })
+    .slice(0, limit);
+};
+
 const normalizeInputItem = (item = {}) => ({
-  text: String(item.text || "").trim(),
+  text: normalizeAiText(item.text),
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
-  comment: String(item.comment || "").trim(),
+  comment: normalizeAiText(item.comment),
 });
 
 const normalizePlanItem = (item = {}) => ({
-  title: String(item.title || "").trim(),
+  title: normalizeAiText(item.title),
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
   priority: Boolean(item.priority),
 });
 
 const normalizePlan = (plan = {}, requestPayload) => {
+  const notesLimit = getAiNotesLimit(requestPayload);
   const normalizedPlan = {
-    summary: String(plan.summary || "").trim(),
+    summary: normalizeAiText(plan.summary),
     totals: {
       incomeTotal: Math.max(0, Math.round(Number(plan?.totals?.incomeTotal) || 0)),
       requiredTotal: Math.max(0, Math.round(Number(plan?.totals?.requiredTotal) || 0)),
@@ -963,10 +1080,10 @@ const normalizePlan = (plan = {}, requestPayload) => {
       ? plan.desiredItems.map(normalizePlanItem).filter((item) => item.title)
       : [],
     notes: Array.isArray(plan.notes)
-      ? plan.notes.map((note) => String(note || "").trim()).filter(Boolean)
+      ? normalizeAiTextList(plan.notes, notesLimit)
       : [],
     warnings: Array.isArray(plan.warnings)
-      ? plan.warnings.map((note) => String(note || "").trim()).filter(Boolean)
+      ? normalizeAiTextList(plan.warnings, MAX_AI_WARNINGS)
       : [],
   };
 
@@ -1042,26 +1159,39 @@ const buildSystemPrompt = () => `
 
 Твоя задача:
 - на основе данных пользователя составить реалистичный и подробный план бюджета;
-- распределить траты по двум категориям: обязательные и необязательные;
+- распределить траты по двум категориям: обязательные и необязательные, с конкретными суммами;
 - уважать ограничение по доходу, если это возможно;
 - если обязательные траты уже превышают доход, сохранить важные обязательные траты и явно предупредить о дефиците в warnings;
 - использовать активы, долги, цели и свободный комментарий пользователя для приоритизации и рекомендаций;
 - писать на русском языке;
+- обращаться к пользователю на "ты"; не использовать "вы", "ваш", "рассмотрите";
 - делать названия пунктов короткими и удобными для UI карточек;
 - если в названии важно указать срок, добавляй его кратко в скобках;
 - не выдумывать источники дохода, которых нет во входных данных;
 - не добавлять комментариев вне JSON.
 
 Правила качества плана:
-- обязательные траты должны покрывать критически важные потребности;
+- обязательные траты должны покрывать критически важные потребности и регулярные платежи;
+- еду, транспорт, лекарства и бытовые мелочи нужно закладывать в requiredItems как базовые расходы, если пользователь не указал их явно;
+- если точной суммы на базовые расходы нет, оцени ее осторожно по доходу, периоду и свободному остатку; не превышай доступный бюджет;
+- если пользователь указал долги, добавь платеж по долгу в requiredItems. Если указана сумма долга, но нет платежа на период, предложи посильный платеж и объясни это в notes;
+- если в долге есть кому, когда или сколько платить, обязательно используй это в названии пункта или в notes;
+- если пользователь указал цель, добавь посильный взнос на цель в desiredItems, если это не ломает обязательные расходы и резерв;
+- если пользователь указал активы, не превращай их автоматически в доход; дай в notes конкретный совет, как использовать актив или почему лучше его не трогать;
 - необязательные траты можно сокращать, объединять или откладывать ради баланса;
-- если после обязательных трат остается запас, можно оставить часть в резерве и объяснить это в notes;
-- notes должны быть практичными и конкретными, 3-6 пунктов;
-- warnings заполняй только если есть риск, дефицит, спорное допущение или конфликт данных.
+- если после расходов остается резерв, рассчитай, как его использовать: дневной лимит, накопление, подушка или цель;
+- summary: один короткий вывод до 180 символов, без общих фраз;
+- notes: количество зависит от данных; если данных мало, достаточно 1-2 пунктов notes, чтобы вместе с summary получилось до 3 карточек; если есть долги, активы, цели или важный комментарий, можно добавить больше, но без воды;
+- каждый пункт notes должен содержать расчет, лимит, дату, сумму или конкретное действие;
+- warnings: это не советы, а только риски. Заполняй warnings, если есть дефицит, нестабильный доход, долг без понятного платежа, просрочка, обязательные расходы выше дохода или конфликт данных;
+- не повторяй одну и ту же мысль в summary, notes и warnings;
+- не пиши общие советы вроде "стоит добавить регулярные расходы", если можно дать расчет;
+- не используй emoji, markdown, кавычки-елочки, спецсимволы, символ � или декоративные знаки; допустимы только обычная русская пунктуация, цифры и знак ₽.
 - ответ должен быть только одним валидным json-объектом без markdown и пояснений вне json.
 `.trim();
 
 const buildUserPrompt = (payload) => {
+  const notesLimit = getAiNotesLimit(payload);
   const totals = {
     incomeTotal: sumAmounts(payload.sections.income),
     requiredInputTotal: sumAmounts(payload.sections.required),
@@ -1069,12 +1199,20 @@ const buildUserPrompt = (payload) => {
     assetsTotal: sumAmounts(payload.sections.assets),
     debtsTotal: sumAmounts(payload.sections.debts),
     goalsTotal: sumAmounts(payload.sections.goals),
+    periodDays: getPeriodDays(payload.period),
+    meaningfulItemsCount: countMeaningfulItems(payload.sections),
+    contextItemsCount: getContextItemsCount(payload.sections),
+    everydayExpensesAlreadyProvided: hasEverydayExpenses(payload.sections),
   };
 
   return [
     "Составь план бюджета на основе этих данных пользователя.",
     "Верни только валидный json-объект.",
     "Используй строго эти ключи верхнего уровня: summary, totals, requiredItems, desiredItems, notes, warnings.",
+    `Ориентир для notes по этим данным: до ${notesLimit} пунктов. Не добавляй пункт ради количества.`,
+    `В warnings верни не больше ${MAX_AI_WARNINGS} пунктов и только реальные риски.`,
+    "В requiredItems заложи еду, транспорт и бытовые мелочи, если их нет во входных расходах. В notes дай дневной лимит по этим тратам.",
+    "Если есть цель, рассчитай посильный взнос на нее. Если есть долги, отрази платеж в обязательных тратах. Если есть активы, дай практичный совет по их использованию.",
     "Формат объекта-образца:",
     JSON.stringify(BUDGET_PLAN_EXAMPLE, null, 2),
     "",

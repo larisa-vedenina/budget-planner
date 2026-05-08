@@ -12,6 +12,22 @@ import {
 const normalizeAmount = (value: number): number =>
   Math.max(0, Math.round(Number(value) || 0));
 
+const MAX_AI_NOTE_ITEMS = 8;
+
+const stripControlCharacters = (value: string): string =>
+  Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127);
+    })
+    .join("");
+
+const normalizeAIText = (value: string): string =>
+  stripControlCharacters(String(value || "").normalize("NFC"))
+    .replace(/\uFFFD+/g, "")
+    .replace(/[ \t\r\n]+/g, " ")
+    .trim();
+
 const createChecklistItemsFromAI = (
   items: AIBudgetPlanItem[],
   category: "required" | "desired",
@@ -20,7 +36,7 @@ const createChecklistItemsFromAI = (
     (item, index) =>
       new ChecklistItemModel(
         `ai_${category}_${Date.now()}_${index}`,
-        item.title.trim() || "Без названия",
+        normalizeAIText(item.title) || "Без названия",
         normalizeAmount(item.amount),
         false,
         category,
@@ -33,12 +49,15 @@ const buildAINotes = (aiPlan: AIBudgetPlanResponse): NoteModel[] => {
     aiPlan.summary,
     ...aiPlan.notes,
     ...aiPlan.warnings,
-  ].filter((note) => Boolean(note?.trim()));
+  ]
+    .map(normalizeAIText)
+    .filter(Boolean)
+    .slice(0, MAX_AI_NOTE_ITEMS);
 
   return rawNotes.map((note, index) =>
     new NoteModel(
       `ai_plan_${Date.now()}_${index}`,
-      note.trim(),
+      note,
       "ai",
     ),
   );
