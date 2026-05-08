@@ -2,13 +2,21 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { NoteModel } from "../../../types/note";
 import { Box } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import styles from "./NoteItem.module.scss";
+
+interface DragHandleProps {
+  attributes?: Record<string, any>;
+  listeners?: Record<string, any>;
+  ref?: (element: HTMLButtonElement | null) => void;
+}
 
 interface NoteItemProps {
   note: NoteModel;
   isEditing: boolean;
   onUpdate: (note: NoteModel) => void;
   onDelete: (id: string) => void;
+  dragHandleProps?: DragHandleProps;
 }
 
 export const NoteItem: React.FC<NoteItemProps> = ({
@@ -16,6 +24,7 @@ export const NoteItem: React.FC<NoteItemProps> = ({
   isEditing,
   onUpdate,
   onDelete,
+  dragHandleProps,
 }) => {
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [tempContent, setTempContent] = useState(note.content);
@@ -75,6 +84,19 @@ export const NoteItem: React.FC<NoteItemProps> = ({
         isEditing ? styles.noteItemEditable : ""
       }`}
     >
+      {isEditing && dragHandleProps && (
+        <button
+          ref={dragHandleProps.ref}
+          type="button"
+          className={styles.dragHandle}
+          title="Перетащить заметку"
+          {...(dragHandleProps.attributes ?? {})}
+          {...(dragHandleProps.listeners ?? {})}
+        >
+          <DragIndicatorIcon className={styles.dragHandleIcon} />
+        </button>
+      )}
+
       {isEditing && isEditingContent ? (
         <textarea
           ref={textareaRef}

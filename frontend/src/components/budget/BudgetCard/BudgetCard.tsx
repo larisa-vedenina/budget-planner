@@ -11,8 +11,6 @@ import { SortableNoteItem } from "../SortableNoteItem";
 import {
   DndContext,
   closestCorners,
-  DragOverlay,
-  DragStartEvent,
   DragEndEvent,
   PointerSensor,
   useSensor,
@@ -101,7 +99,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     ChecklistItemModel[] | NoteModel[]
   >(items);
   const [localAmount, setLocalAmount] = useState(amount || 0);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [delayedCompletedIds, setDelayedCompletedIds] = useState<string[]>([]);
 
   const textColor = getContrastTextColor(backgroundColor);
@@ -310,12 +307,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     return (activeItems as ChecklistItemModel[]).map((item) => item.id);
   }, [activeItems, isNotesColumn]);
 
-  // Начало перетаскивания
-  const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    setActiveId(active.id as string);
-  };
-
   // Завершение перетаскивания
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -349,27 +340,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
         }
       }
     }
-
-    setActiveId(null);
   };
-
-  // Получаем активный элемент для DragOverlay
-  const activeItem = useMemo(() => {
-    if (!activeId) return null;
-
-    if (isNotesColumn) {
-      return (
-        (activeItems as NoteModel[]).find((note) => note.id === activeId) ||
-        null
-      );
-    } else {
-      return (
-        (activeItems as ChecklistItemModel[]).find(
-          (item) => item.id === activeId,
-        ) || null
-      );
-    }
-  }, [activeId, activeItems, isNotesColumn]);
 
   // Обработчики
   const handleItemUpdate = (updatedItem: ChecklistItemModel) => {
@@ -468,7 +439,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
   return (
     <Box
-      className={styles.card}
+      className={`${styles.card} ${isNotesColumn ? styles.notesCard : ""}`}
       style={
         {
           "--budget-card-bg": backgroundColor,
@@ -515,63 +486,56 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       </Box>
 
       {/* ОСНОВНОЙ КОНТЕНТ - БЕЗ СКРОЛЛА ДЛЯ АКТИВНЫХ ПУНКТОВ */}
-      <Box className={styles.content}>
+      <Box
+        className={`${styles.content} ${
+          isNotesColumn ? styles.notesContent : ""
+        }`}
+      >
         {isNotesColumn ? (
           // ЗАМЕТКИ
           <DndContext
             sensors={sensors}
             collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext
-              items={activeItemIds}
-              strategy={verticalListSortingStrategy}
-            >
-              {/* Активные заметки */}
-              {(activeItems as NoteModel[]).map((note) => (
-                <SortableNoteItem
-                  key={note.id}
-                  note={note}
-                  isEditing={isEditMode}
-                  onUpdate={onNoteUpdate}
-                  onDelete={onNoteDelete}
-                />
-              ))}
+            <Box className={styles.notesScroller}>
+              <SortableContext
+                items={activeItemIds}
+                strategy={verticalListSortingStrategy}
+              >
+                {/* Активные заметки */}
+                {(activeItems as NoteModel[]).map((note) => (
+                  <SortableNoteItem
+                    key={note.id}
+                    note={note}
+                    isEditing={isEditMode}
+                    onUpdate={onNoteUpdate}
+                    onDelete={onNoteDelete}
+                  />
+                ))}
 
-              {/* КНОПКА ДОБАВЛЕНИЯ ЗАМЕТКИ В РЕЖИМЕ РЕДАКТИРОВАНИЯ */}
-              {isEditMode && (
-                <button
-                  type="button"
-                  onClick={onAddNote}
-                  className={styles.addButton}
-                >
-                  <Box className={styles.addButtonCenter}>
-                    <span className={styles.addButtonIcon}>+</span>
+                {/* КНОПКА ДОБАВЛЕНИЯ ЗАМЕТКИ В РЕЖИМЕ РЕДАКТИРОВАНИЯ */}
+                {isEditMode && (
+                  <button
+                    type="button"
+                    onClick={onAddNote}
+                    className={styles.addButton}
+                  >
+                    <Box className={styles.addButtonCenter}>
+                      <span className={styles.addButtonIcon}>+</span>
+                    </Box>
+                  </button>
+                )}
+
+                {/* Сообщение если нет заметок */}
+                {(activeItems as NoteModel[]).length === 0 && !isEditMode && (
+                  <Box className={styles.emptyMessage}>
+                    <div className={styles.emptyMessageText}>Пока тут нет заметок</div>
                   </Box>
-                </button>
-              )}
+                )}
+              </SortableContext>
+            </Box>
 
-              {/* Сообщение если нет заметок */}
-              {(activeItems as NoteModel[]).length === 0 && !isEditMode && (
-                <Box className={styles.emptyMessage}>
-                  <div className={styles.emptyMessageText}>Пока тут нет заметок</div>
-                </Box>
-              )}
-            </SortableContext>
-
-            <DragOverlay>
-              {activeItem && isNotesColumn && (
-                <div className={styles.dragPreview}>
-                  <div className={styles.dragPreviewTitle}>
-                    {(activeItem as NoteModel).content.substring(0, 50)}...
-                  </div>
-                  <div className={styles.dragPreviewMeta}>
-                    {(activeItem as NoteModel).getSignature()}
-                  </div>
-                </div>
-              )}
-            </DragOverlay>
           </DndContext>
         ) : (
           // ПУНКТЫ РАСХОДОВ
@@ -580,7 +544,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
-                onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext

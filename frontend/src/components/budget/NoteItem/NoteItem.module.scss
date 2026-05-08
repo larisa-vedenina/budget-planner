@@ -16,6 +16,7 @@
 }
 
 .noteItemEditable {
+  padding-left: rem(48);
   box-shadow: var(--budget-card-shadow, var(--shadow-neutral-edit));
 }
 
@@ -39,6 +40,30 @@
   box-sizing: border-box;
   resize: vertical;
   outline: none;
+}
+
+.dragHandle {
+  position: absolute;
+  top: rem(10);
+  left: rem(10);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: rem(24);
+  height: rem(24);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: grab;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandleIcon {
+  font-size: rem(22);
 }
 
 .content {
@@ -99,8 +124,21 @@
 
 @media (max-width: 768px) {
   .noteItem {
-    width: 100%;
+    width: 98%;
     max-width: 100%;
     margin: 0 0 rem(10);
+  }
+
+  .noteItemEditable {
+    padding-left: rem(38);
+  }
+
+  .dragHandle {
+    top: rem(8);
+    left: rem(8);
+  }
+
+  .dragHandleIcon {
+    font-size: rem(20);
   }
 }
