@@ -145,7 +145,7 @@ export const ProfileMenu: React.FC = () => {
         <div className={styles.menu}>
           <div className={styles.profileInfo}>
             <div className={styles.profileLogin}>{user.name}</div>
-            <div className={styles.profilePhone}>{user.phone}</div>
+            <div className={styles.profileEmail}>{user.email}</div>
           </div>
 
           <div className={styles.menuActions}>

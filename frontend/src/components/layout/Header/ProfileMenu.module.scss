@@ -103,10 +103,12 @@
   text-transform: uppercase;
 }
 
-.profilePhone {
+.profileEmail {
   font-size: rem(16);
   font-weight: 400;
   color: var(--color-text-secondary);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .menuActions {

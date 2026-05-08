@@ -6,8 +6,7 @@ import { apiClient } from "./apiClient";
 interface RawUser {
   id: string;
   login?: string;
-  phone: string;
-  email?: string;
+  email: string;
   avatarUrl?: string;
   name: string;
   createdAt: string;
@@ -17,7 +16,6 @@ interface RawUser {
 const normalizeUser = (user: RawUser): User => ({
   id: user.id,
   name: user.name || user.login || "",
-  phone: user.phone,
   email: user.email,
   avatarUrl: user.avatarUrl,
   createdAt: new Date(user.createdAt),
@@ -26,19 +24,19 @@ const normalizeUser = (user: RawUser): User => ({
 
 export const requestOtpCode = async (
   name: string,
-  phone: string,
-): Promise<{ phone: string; expiresAt: Date }> => {
+  email: string,
+): Promise<{ email: string; expiresAt: Date }> => {
   try {
     const response = await apiClient.post<ApiResponse<RequestOtpResponse>>(
       "/api/auth/request-code",
       {
         name,
-        phone,
+        email,
       },
     );
 
     return {
-      phone: response.data.data.phone,
+      email: response.data.data.email,
       expiresAt: new Date(response.data.data.expiresAt),
     };
   } catch (error) {
@@ -56,7 +54,7 @@ export const requestOtpCode = async (
 
 export const verifyOtpCode = async (
   name: string,
-  phone: string,
+  email: string,
   code: string,
 ): Promise<User> => {
   try {
@@ -64,7 +62,7 @@ export const verifyOtpCode = async (
       "/api/auth/verify-code",
       {
         name,
-        phone,
+        email,
         code,
       },
     );
