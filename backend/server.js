@@ -7,8 +7,9 @@ const { Pool } = require("pg");
 const twilio = require("twilio");
 
 const DEFAULT_PORT = 8787;
-const DEFAULT_PROVIDER = "deepseek";
-const DEFAULT_MODEL = "deepseek-chat";
+const DEFAULT_PROVIDER = "gemini";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
 const DEFAULT_ALLOWED_ORIGIN = "http://localhost:3000";
 const DEFAULT_AUTH_COOKIE_NAME = "budget_planner_session";
 const DEFAULT_DATABASE_POOL_MAX = 5;
@@ -19,6 +20,8 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
 const DEEPSEEK_CHAT_COMPLETIONS_URL = "https://api.deepseek.com/chat/completions";
+const GEMINI_GENERATE_CONTENT_BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta";
 const FRONTEND_BUILD_DIR = path.resolve(__dirname, "../frontend/build");
 
 const BUDGET_PLAN_EXAMPLE = {
@@ -161,20 +164,74 @@ const detectDatabaseProvider = (databaseUrl) => {
   return "postgres";
 };
 
+const normalizeProvider = (provider) => {
+  const normalizedProvider = String(provider || DEFAULT_PROVIDER)
+    .trim()
+    .toLowerCase();
+
+  if (["gemini", "google", "google-gemini"].includes(normalizedProvider)) {
+    return "gemini";
+  }
+
+  if (normalizedProvider === "deepseek") {
+    return "deepseek";
+  }
+
+  return normalizedProvider;
+};
+
+const getProviderApiKey = (provider) => {
+  if (provider === "gemini") {
+    return (
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.AI_API_KEY ||
+      ""
+    );
+  }
+
+  if (provider === "deepseek") {
+    return (
+      process.env.DEEPSEEK_API_KEY ||
+      process.env.AI_API_KEY ||
+      process.env.OPENAI_API_KEY ||
+      ""
+    );
+  }
+
+  return process.env.AI_API_KEY || "";
+};
+
+const getProviderModel = (provider) => {
+  if (provider === "gemini") {
+    return (
+      process.env.GEMINI_MODEL ||
+      process.env.GOOGLE_MODEL ||
+      process.env.AI_MODEL ||
+      DEFAULT_GEMINI_MODEL
+    );
+  }
+
+  if (provider === "deepseek") {
+    return (
+      process.env.DEEPSEEK_MODEL ||
+      process.env.AI_MODEL ||
+      process.env.OPENAI_MODEL ||
+      DEFAULT_DEEPSEEK_MODEL
+    );
+  }
+
+  return process.env.AI_MODEL || DEFAULT_GEMINI_MODEL;
+};
+
+const provider = normalizeProvider(process.env.LLM_PROVIDER);
+
 const config = {
-  provider: process.env.LLM_PROVIDER || DEFAULT_PROVIDER,
+  provider,
   host: process.env.HOST || (process.env.RENDER ? "0.0.0.0" : "127.0.0.1"),
   port: Number.parseInt(process.env.PORT || `${DEFAULT_PORT}`, 10) || DEFAULT_PORT,
-  apiKey:
-    process.env.DEEPSEEK_API_KEY ||
-    process.env.AI_API_KEY ||
-    process.env.OPENAI_API_KEY ||
-    "",
-  model:
-    process.env.DEEPSEEK_MODEL ||
-    process.env.AI_MODEL ||
-    process.env.OPENAI_MODEL ||
-    DEFAULT_MODEL,
+  apiKey: getProviderApiKey(provider),
+  model: getProviderModel(provider),
   allowedOrigin: process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN,
   databaseUrl: process.env.DATABASE_URL || "",
   databaseSsl: parseDatabaseSsl(),
@@ -1035,11 +1092,73 @@ const extractChatCompletionText = (providerResponse) => {
   throw createHttpError("AI response does not contain message content.", 502);
 };
 
-const generateBudgetPlan = async (payload) => {
-  if (!config.apiKey) {
-    throw createHttpError("AI API key is not configured.", 500);
+const getGeminiModelName = (model) =>
+  String(model || DEFAULT_GEMINI_MODEL)
+    .trim()
+    .replace(/^models\//, "");
+
+const buildGeminiGenerateContentUrl = (model) =>
+  `${GEMINI_GENERATE_CONTENT_BASE_URL}/models/${encodeURIComponent(
+    getGeminiModelName(model),
+  )}:generateContent`;
+
+const extractGeminiContentText = (providerResponse) => {
+  const firstCandidate = Array.isArray(providerResponse?.candidates)
+    ? providerResponse.candidates[0]
+    : null;
+
+  const parts = Array.isArray(firstCandidate?.content?.parts)
+    ? firstCandidate.content.parts
+    : [];
+
+  const content = parts
+    .map((part) => (typeof part.text === "string" ? part.text : ""))
+    .join("")
+    .trim();
+
+  if (content) {
+    return content;
   }
 
+  const blockReason =
+    providerResponse?.promptFeedback?.blockReason ||
+    firstCandidate?.finishReason ||
+    "unknown";
+
+  throw createHttpError(
+    `Gemini response does not contain message content. Reason: ${blockReason}.`,
+    502,
+  );
+};
+
+const parseJsonPlanText = (rawPlanText) => {
+  const cleanedPlanText = String(rawPlanText || "")
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleanedPlanText);
+  } catch (error) {
+    const firstBraceIndex = cleanedPlanText.indexOf("{");
+    const lastBraceIndex = cleanedPlanText.lastIndexOf("}");
+
+    if (firstBraceIndex !== -1 && lastBraceIndex > firstBraceIndex) {
+      try {
+        return JSON.parse(
+          cleanedPlanText.slice(firstBraceIndex, lastBraceIndex + 1),
+        );
+      } catch (fallbackError) {
+        throw createHttpError("AI provider returned invalid budget JSON.", 502);
+      }
+    }
+
+    throw createHttpError("AI provider returned invalid budget JSON.", 502);
+  }
+};
+
+const generateBudgetPlanWithDeepSeek = async (payload) => {
   const providerRequest = {
     model: config.model,
     temperature: 0.2,
@@ -1063,7 +1182,63 @@ const generateBudgetPlan = async (payload) => {
   });
 
   const rawPlanText = extractChatCompletionText(providerResponse);
-  return normalizePlan(JSON.parse(rawPlanText), payload);
+  return normalizePlan(parseJsonPlanText(rawPlanText), payload);
+};
+
+const generateBudgetPlanWithGemini = async (payload) => {
+  const providerRequest = {
+    systemInstruction: {
+      parts: [
+        {
+          text: buildSystemPrompt(),
+        },
+      ],
+    },
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: buildUserPrompt(payload),
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: "application/json",
+    },
+  };
+
+  const providerResponse = await postJson(
+    buildGeminiGenerateContentUrl(config.model),
+    providerRequest,
+    {
+      "x-goog-api-key": config.apiKey,
+    },
+  );
+
+  const rawPlanText = extractGeminiContentText(providerResponse);
+  return normalizePlan(parseJsonPlanText(rawPlanText), payload);
+};
+
+const generateBudgetPlan = async (payload) => {
+  if (!config.apiKey) {
+    throw createHttpError(
+      `${config.provider} API key is not configured.`,
+      500,
+    );
+  }
+
+  if (config.provider === "gemini") {
+    return generateBudgetPlanWithGemini(payload);
+  }
+
+  if (config.provider === "deepseek") {
+    return generateBudgetPlanWithDeepSeek(payload);
+  }
+
+  throw createHttpError(`Unsupported AI provider: ${config.provider}.`, 500);
 };
 
 const requestPhoneVerification = async (normalizedPhone) => {

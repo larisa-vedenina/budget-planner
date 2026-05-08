@@ -11,9 +11,9 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: LLM_PROVIDER
-        value: deepseek
-      - key: DEEPSEEK_MODEL
-        value: deepseek-chat
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: ALLOWED_ORIGIN
         value: "*"
       - key: DATABASE_URL
@@ -26,7 +26,7 @@ services:
         value: "10000"
       - key: DATABASE_IDLE_TIMEOUT_MS
         value: "30000"
-      - key: DEEPSEEK_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: TWILIO_ACCOUNT_SID
         sync: false
