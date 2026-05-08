@@ -176,12 +176,17 @@ export const LoginPage = () => {
   return (
     <main className={styles.page}>
       <div className={styles.content}>
-        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className={styles.form}
+          autoComplete="off"
+          noValidate
+        >
           <label className={styles.field}>
             <input
               type="text"
-              name="name"
-              autoComplete="name"
+              name="budgetPlannerName"
+              autoComplete="off"
               placeholder="Имя"
               value={name}
               onChange={handleNameChange}
@@ -196,9 +201,9 @@ export const LoginPage = () => {
 
           <label className={styles.field}>
             <input
-              type="email"
-              name="email"
-              autoComplete="email"
+              type="text"
+              name="budgetPlannerEmail"
+              autoComplete="off"
               inputMode="email"
               placeholder="Почта"
               value={email}
@@ -216,8 +221,8 @@ export const LoginPage = () => {
             <label className={styles.field}>
               <input
                 type="text"
-                name="otp"
-                autoComplete="one-time-code"
+                name="budgetPlannerCode"
+                autoComplete="off"
                 inputMode="numeric"
                 maxLength={6}
                 placeholder="Одноразовый код"

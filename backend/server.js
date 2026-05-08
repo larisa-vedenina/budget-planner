@@ -4,24 +4,27 @@ const http = require("http");
 const https = require("https");
 const path = require("path");
 const { Pool } = require("pg");
-const twilio = require("twilio");
 
 const DEFAULT_PORT = 8787;
 const DEFAULT_PROVIDER = "gemini";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
+const DEFAULT_EMAIL_PROVIDER = "resend";
 const DEFAULT_ALLOWED_ORIGIN = "http://localhost:3000";
 const DEFAULT_AUTH_COOKIE_NAME = "budget_planner_session";
 const DEFAULT_DATABASE_POOL_MAX = 5;
 const DEFAULT_DATABASE_CONNECTION_TIMEOUT_MS = 10_000;
 const DEFAULT_DATABASE_IDLE_TIMEOUT_MS = 30_000;
-const DATABASE_SCHEMA_VERSION = "2026_05_07_001_budget_snapshot_storage";
+const DATABASE_SCHEMA_VERSION = "2026_05_08_001_email_auth_resend";
 const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
 const DEEPSEEK_CHAT_COMPLETIONS_URL = "https://api.deepseek.com/chat/completions";
 const GEMINI_GENERATE_CONTENT_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta";
+const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 const FRONTEND_BUILD_DIR = path.resolve(__dirname, "../frontend/build");
 
 const BUDGET_PLAN_EXAMPLE = {
@@ -224,10 +227,26 @@ const getProviderModel = (provider) => {
   return process.env.AI_MODEL || DEFAULT_GEMINI_MODEL;
 };
 
+const normalizeEmailProvider = (providerName) => {
+  const normalizedProviderName = String(providerName || DEFAULT_EMAIL_PROVIDER)
+    .trim()
+    .toLowerCase();
+
+  if (["resend", "resend-email"].includes(normalizedProviderName)) {
+    return "resend";
+  }
+
+  return normalizedProviderName;
+};
+
 const provider = normalizeProvider(process.env.LLM_PROVIDER);
+const emailProvider = normalizeEmailProvider(process.env.EMAIL_PROVIDER);
+const runtimeOtpSecret =
+  process.env.AUTH_OTP_SECRET || crypto.randomBytes(32).toString("hex");
 
 const config = {
   provider,
+  emailProvider,
   host: process.env.HOST || (process.env.RENDER ? "0.0.0.0" : "127.0.0.1"),
   port: Number.parseInt(process.env.PORT || `${DEFAULT_PORT}`, 10) || DEFAULT_PORT,
   apiKey: getProviderApiKey(provider),
@@ -251,9 +270,10 @@ const config = {
   cookieSecure:
     process.env.COOKIE_SECURE === "true" ||
     (process.env.COOKIE_SECURE !== "false" && Boolean(process.env.RENDER)),
-  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
-  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
-  twilioVerifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "",
+  resendApiKey: process.env.RESEND_API_KEY || "",
+  authEmailFrom: process.env.AUTH_EMAIL_FROM || "",
+  authOtpSecret: runtimeOtpSecret,
+  hasStaticOtpSecret: Boolean(process.env.AUTH_OTP_SECRET),
 };
 
 config.databaseUrlError = getDatabaseUrlError(config.databaseUrl);
@@ -274,13 +294,6 @@ if (pool) {
     console.error("[budget-planner-backend] Database pool error:", error.message);
   });
 }
-
-const twilioClient =
-  config.twilioAccountSid &&
-  config.twilioAuthToken &&
-  config.twilioVerifyServiceSid
-    ? twilio(config.twilioAccountSid, config.twilioAuthToken)
-    : null;
 
 const canServeFrontend = () =>
   fs.existsSync(path.join(FRONTEND_BUILD_DIR, "index.html"));
@@ -488,59 +501,28 @@ const buildExpiredSessionCookie = () =>
     maxAge: 0,
   });
 
-const getDigits = (value) => String(value || "").replace(/\D/g, "");
-
-const normalizePhone = (value) => {
-  const digits = getDigits(value);
-
-  if (digits.length === 11 && (digits.startsWith("7") || digits.startsWith("8"))) {
-    return `7${digits.slice(1)}`;
-  }
-
-  if (digits.length === 10) {
-    return `7${digits}`;
-  }
-
-  return digits.slice(0, 11);
-};
-
-const formatPhoneDisplay = (value) => {
-  const normalizedPhone = normalizePhone(value);
-
-  if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith("7")) {
-    return value;
-  }
-
-  const nationalDigits = normalizedPhone.slice(1);
-
-  return `+7 (${nationalDigits.slice(0, 3)}) ${nationalDigits.slice(
-    3,
-    6,
-  )}-${nationalDigits.slice(6, 8)}-${nationalDigits.slice(8, 10)}`;
-};
-
-const toE164Phone = (value) => {
-  const normalizedPhone = normalizePhone(value);
-  return normalizedPhone ? `+${normalizedPhone}` : "";
-};
-
 const sanitizeName = (value) => String(value || "").trim();
+
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+
+const isValidEmail = (value) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 
 const validateAuthPayload = (payload) => {
   const name = sanitizeName(payload?.name);
-  const normalizedPhone = normalizePhone(payload?.phone);
+  const email = normalizeEmail(payload?.email);
 
   if (name.length < 2) {
     throw createHttpError("Укажите имя длиной не меньше 2 символов.", 400);
   }
 
-  if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith("7")) {
-    throw createHttpError("Введите номер телефона полностью.", 400);
+  if (!isValidEmail(email)) {
+    throw createHttpError("Введите корректную почту.", 400);
   }
 
   return {
     name,
-    normalizedPhone,
+    email,
   };
 };
 
@@ -557,6 +539,22 @@ const validateOtpCode = (value) => {
 const hashToken = (token) =>
   crypto.createHash("sha256").update(String(token)).digest("hex");
 
+const hashOtpCode = (email, code) =>
+  crypto
+    .createHmac("sha256", config.authOtpSecret)
+    .update(`${normalizeEmail(email)}:${String(code).trim()}`)
+    .digest("hex");
+
+const isHashMatch = (firstHash, secondHash) => {
+  const firstBuffer = Buffer.from(String(firstHash || ""), "hex");
+  const secondBuffer = Buffer.from(String(secondHash || ""), "hex");
+
+  return (
+    firstBuffer.length === secondBuffer.length &&
+    crypto.timingSafeEqual(firstBuffer, secondBuffer)
+  );
+};
+
 const requireDatabase = () => {
   if (config.databaseUrlError) {
     throw createHttpError(config.databaseUrlError, 500);
@@ -567,10 +565,17 @@ const requireDatabase = () => {
   }
 };
 
-const requireTwilioVerify = () => {
-  if (!twilioClient) {
+const requireResendEmail = () => {
+  if (config.emailProvider !== "resend") {
     throw createHttpError(
-      "Twilio Verify не настроен. Добавьте TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN и TWILIO_VERIFY_SERVICE_SID.",
+      `Email-провайдер ${config.emailProvider} не поддерживается.`,
+      500,
+    );
+  }
+
+  if (!config.resendApiKey || !config.authEmailFrom) {
+    throw createHttpError(
+      "Resend не настроен. Добавьте RESEND_API_KEY и AUTH_EMAIL_FROM.",
       500,
     );
   }
@@ -595,12 +600,46 @@ const ensureDatabaseSchema = async () => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       login TEXT NOT NULL,
-      phone TEXT NOT NULL UNIQUE,
-      email TEXT,
+      phone TEXT,
+      email TEXT NOT NULL UNIQUE,
       avatar_url TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_login TIMESTAMPTZ
     );
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS email TEXT;
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS phone TEXT;
+
+    UPDATE users
+    SET email = LOWER(TRIM(email))
+    WHERE email IS NOT NULL;
+
+    UPDATE users
+    SET email = id || '@budget.local'
+    WHERE email IS NULL OR TRIM(email) = '';
+
+    WITH duplicated_user_emails AS (
+      SELECT email
+      FROM users
+      WHERE email IS NOT NULL
+      GROUP BY email
+      HAVING COUNT(*) > 1
+    )
+    UPDATE users
+    SET email = id || '@budget.local'
+    WHERE email IN (SELECT email FROM duplicated_user_emails);
+
+    ALTER TABLE users
+      ALTER COLUMN email SET NOT NULL;
+
+    ALTER TABLE users
+      ALTER COLUMN phone DROP NOT NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx
+      ON users (email);
 
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id TEXT PRIMARY KEY,
@@ -616,6 +655,22 @@ const ensureDatabaseSchema = async () => {
 
     CREATE INDEX IF NOT EXISTS auth_sessions_token_hash_idx
       ON auth_sessions (token_hash);
+
+    CREATE TABLE IF NOT EXISTS auth_email_codes (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS auth_email_codes_email_created_at_idx
+      ON auth_email_codes (email, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS auth_email_codes_expires_at_idx
+      ON auth_email_codes (expires_at);
 
     CREATE TABLE IF NOT EXISTS budget_snapshots (
       user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -641,11 +696,22 @@ const deleteExpiredSessions = async () => {
   `);
 };
 
+const deleteExpiredEmailCodes = async () => {
+  if (!pool) {
+    return;
+  }
+
+  await pool.query(`
+    DELETE FROM auth_email_codes
+    WHERE expires_at <= NOW()
+      OR consumed_at IS NOT NULL
+  `);
+};
+
 const mapUserRecord = (row) => ({
   id: row.id,
   login: row.login,
-  phone: formatPhoneDisplay(row.phone),
-  email: row.email || undefined,
+  email: row.email,
   avatarUrl: row.avatar_url || undefined,
   name: row.name,
   createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
@@ -655,17 +721,17 @@ const mapUserRecord = (row) => ({
       : row.last_login || undefined,
 });
 
-const findOrCreateUser = async ({ name, normalizedPhone }) => {
+const findOrCreateUser = async ({ name, email }) => {
   requireDatabase();
 
   const existingUserResult = await pool.query(
     `
       SELECT *
       FROM users
-      WHERE phone = $1
+      WHERE email = $1
       LIMIT 1
     `,
-    [normalizedPhone],
+    [email],
   );
 
   if (existingUserResult.rows[0]) {
@@ -687,15 +753,14 @@ const findOrCreateUser = async ({ name, normalizedPhone }) => {
 
   const newUserResult = await pool.query(
     `
-      INSERT INTO users (id, name, login, phone, email, created_at, last_login)
-      VALUES ($1, $2, $2, $3, $4, NOW(), NOW())
+      INSERT INTO users (id, name, login, email, created_at, last_login)
+      VALUES ($1, $2, $2, $3, NOW(), NOW())
       RETURNING *
     `,
     [
       `user_${crypto.randomUUID()}`,
       name,
-      normalizedPhone,
-      `${normalizedPhone}@budget.local`,
+      email,
     ],
   );
 
@@ -1025,10 +1090,11 @@ const buildUserPrompt = (payload) => {
   ].join("\n");
 };
 
-const postJson = (url, payload, headers = {}) =>
+const postJson = (url, payload, headers = {}, options = {}) =>
   new Promise((resolve, reject) => {
     const targetUrl = new URL(url);
     const body = JSON.stringify(payload);
+    const serviceName = options.serviceName || "Внешний сервис";
 
     const upstreamRequest = https.request(
       {
@@ -1056,13 +1122,15 @@ const postJson = (url, payload, headers = {}) =>
           try {
             parsedResponse = rawResponse ? JSON.parse(rawResponse) : {};
           } catch (error) {
-            reject(createHttpError("AI provider returned invalid JSON.", 502));
+            reject(createHttpError(`${serviceName} вернул некорректный JSON.`, 502));
             return;
           }
 
           if ((upstreamResponse.statusCode || 500) >= 400) {
             const upstreamError = createHttpError(
-              parsedResponse?.error?.message || "AI provider request failed.",
+              parsedResponse?.error?.message ||
+                parsedResponse?.message ||
+                `${serviceName} вернул ошибку.`,
               upstreamResponse.statusCode || 500,
             );
             reject(upstreamError);
@@ -1177,9 +1245,16 @@ const generateBudgetPlanWithDeepSeek = async (payload) => {
     ],
   };
 
-  const providerResponse = await postJson(DEEPSEEK_CHAT_COMPLETIONS_URL, providerRequest, {
-    Authorization: `Bearer ${config.apiKey}`,
-  });
+  const providerResponse = await postJson(
+    DEEPSEEK_CHAT_COMPLETIONS_URL,
+    providerRequest,
+    {
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    {
+      serviceName: "AI provider",
+    },
+  );
 
   const rawPlanText = extractChatCompletionText(providerResponse);
   return normalizePlan(parseJsonPlanText(rawPlanText), payload);
@@ -1216,6 +1291,9 @@ const generateBudgetPlanWithGemini = async (payload) => {
     {
       "x-goog-api-key": config.apiKey,
     },
+    {
+      serviceName: "AI provider",
+    },
   );
 
   const rawPlanText = extractGeminiContentText(providerResponse);
@@ -1241,49 +1319,195 @@ const generateBudgetPlan = async (payload) => {
   throw createHttpError(`Unsupported AI provider: ${config.provider}.`, 500);
 };
 
-const requestPhoneVerification = async (normalizedPhone) => {
-  requireTwilioVerify();
+const generateOtpCode = () =>
+  crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 
-  try {
-    await twilioClient.verify.v2
-      .services(config.twilioVerifyServiceSid)
-      .verifications.create({
-        to: toE164Phone(normalizedPhone),
-        channel: "sms",
-        locale: "ru",
-      });
-  } catch (error) {
-    throw createHttpError(
-      error?.message || "Не удалось отправить одноразовый код.",
-      error?.status || 502,
-    );
-  }
+const escapeHtml = (value) =>
+  String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const buildOtpEmailHtml = ({ name, code }) => `
+  <div style="font-family: Arial, sans-serif; color: #222; line-height: 1.5;">
+    <p>Привет, ${escapeHtml(name)}.</p>
+    <p>Код для входа в Budget Planner:</p>
+    <p style="font-size: 28px; letter-spacing: 6px; margin: 20px 0;"><strong>${code}</strong></p>
+    <p>Он действует 10 минут. Если это была не ты, просто проигнорируй это письмо.</p>
+  </div>
+`.trim();
+
+const buildOtpEmailText = ({ name, code }) =>
+  [
+    `Привет, ${name}.`,
+    "",
+    `Код для входа в Budget Planner: ${code}`,
+    "",
+    "Он действует 10 минут. Если это была не ты, просто проигнорируй это письмо.",
+  ].join("\n");
+
+const sendOtpEmail = async ({ email, name, code }) => {
+  requireResendEmail();
+
+  await postJson(
+    RESEND_EMAILS_URL,
+    {
+      from: config.authEmailFrom,
+      to: [email],
+      subject: "Код для входа в Budget Planner",
+      html: buildOtpEmailHtml({ name, code }),
+      text: buildOtpEmailText({ name, code }),
+    },
+    {
+      Authorization: `Bearer ${config.resendApiKey}`,
+      "User-Agent": "budget-planner/1.0",
+    },
+    {
+      serviceName: "Resend",
+    },
+  );
 };
 
-const verifyPhoneCode = async (normalizedPhone, code) => {
-  requireTwilioVerify();
+const requestEmailVerification = async ({ name, email }) => {
+  requireDatabase();
+  requireResendEmail();
 
-  try {
-    const result = await twilioClient.verify.v2
-      .services(config.twilioVerifyServiceSid)
-      .verificationChecks.create({
-        to: toE164Phone(normalizedPhone),
-        code,
-      });
+  await deleteExpiredEmailCodes();
 
-    if (result.status !== "approved") {
-      throw createHttpError("Код не подошел. Попробуйте еще раз.", 400);
-    }
-  } catch (error) {
-    if (error.statusCode) {
-      throw error;
-    }
+  const cooldownResult = await pool.query(
+    `
+      SELECT created_at
+      FROM auth_email_codes
+      WHERE email = $1
+        AND consumed_at IS NULL
+        AND created_at > NOW() - ($2::int * INTERVAL '1 millisecond')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [email, OTP_RESEND_COOLDOWN_MS],
+  );
 
+  if (cooldownResult.rows[0]) {
     throw createHttpError(
-      error?.message || "Не удалось подтвердить одноразовый код.",
-      error?.status || 502,
+      "Код уже отправлен. Попробуйте еще раз через минуту.",
+      429,
     );
   }
+
+  await pool.query(
+    `
+      UPDATE auth_email_codes
+      SET consumed_at = NOW()
+      WHERE email = $1
+        AND consumed_at IS NULL
+    `,
+    [email],
+  );
+
+  const code = generateOtpCode();
+  const codeId = `otp_${crypto.randomUUID()}`;
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await pool.query(
+    `
+      INSERT INTO auth_email_codes (id, email, code_hash, expires_at)
+      VALUES ($1, $2, $3, $4)
+    `,
+    [codeId, email, hashOtpCode(email, code), expiresAt],
+  );
+
+  try {
+    await sendOtpEmail({ email, name, code });
+  } catch (error) {
+    await pool.query(
+      `
+        DELETE FROM auth_email_codes
+        WHERE id = $1
+      `,
+      [codeId],
+    );
+
+    throw createHttpError(
+      error?.message || "Не удалось отправить код на почту.",
+      error?.statusCode || error?.status || 502,
+    );
+  }
+
+  return expiresAt;
+};
+
+const verifyEmailCode = async ({ email, code }) => {
+  requireDatabase();
+
+  const verificationResult = await pool.query(
+    `
+      SELECT *
+      FROM auth_email_codes
+      WHERE email = $1
+        AND consumed_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [email],
+  );
+
+  const verification = verificationResult.rows[0];
+
+  if (!verification) {
+    throw createHttpError("Запросите новый код для входа.", 400);
+  }
+
+  if (new Date(verification.expires_at).getTime() <= Date.now()) {
+    await pool.query(
+      `
+        DELETE FROM auth_email_codes
+        WHERE id = $1
+      `,
+      [verification.id],
+    );
+
+    throw createHttpError("Код устарел. Запросите новый код.", 400);
+  }
+
+  if (verification.attempts >= OTP_MAX_ATTEMPTS) {
+    await pool.query(
+      `
+        UPDATE auth_email_codes
+        SET consumed_at = NOW()
+        WHERE id = $1
+      `,
+      [verification.id],
+    );
+
+    throw createHttpError("Слишком много попыток. Запросите новый код.", 429);
+  }
+
+  if (!isHashMatch(verification.code_hash, hashOtpCode(email, code))) {
+    const nextAttempts = verification.attempts + 1;
+
+    await pool.query(
+      `
+        UPDATE auth_email_codes
+        SET
+          attempts = $2,
+          consumed_at = CASE WHEN $2 >= $3 THEN NOW() ELSE consumed_at END
+        WHERE id = $1
+      `,
+      [verification.id, nextAttempts, OTP_MAX_ATTEMPTS],
+    );
+
+    throw createHttpError("Код не подошел. Попробуйте еще раз.", 400);
+  }
+
+  await pool.query(
+    `
+      UPDATE auth_email_codes
+      SET consumed_at = NOW()
+      WHERE id = $1
+    `,
+    [verification.id],
+  );
 };
 
 const handleHealthRequest = async (request, response) => {
@@ -1319,7 +1543,13 @@ const handleHealthRequest = async (request, response) => {
         schemaVersion: DATABASE_SCHEMA_VERSION,
         message: databaseMessage,
       },
-      authProvider: twilioClient ? "twilio-verify" : "not_configured",
+      authProvider:
+        config.emailProvider === "resend" &&
+        config.resendApiKey &&
+        config.authEmailFrom
+          ? "resend-email"
+          : "not_configured",
+      emailProvider: config.emailProvider,
     },
     timestamp: new Date().toISOString(),
   });
@@ -1327,16 +1557,16 @@ const handleHealthRequest = async (request, response) => {
 
 const handleAuthRequestCode = async (request, response) => {
   const requestBody = await readJsonBody(request);
-  const { name, normalizedPhone } = validateAuthPayload(requestBody);
+  const { name, email } = validateAuthPayload(requestBody);
 
-  await requestPhoneVerification(normalizedPhone);
+  const expiresAt = await requestEmailVerification({ name, email });
 
   sendJson(request, response, 200, {
     success: true,
     data: {
-      phone: formatPhoneDisplay(normalizedPhone),
+      email,
       name,
-      expiresAt: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+      expiresAt: expiresAt.toISOString(),
     },
     timestamp: new Date().toISOString(),
   });
@@ -1344,14 +1574,14 @@ const handleAuthRequestCode = async (request, response) => {
 
 const handleAuthVerifyCode = async (request, response) => {
   const requestBody = await readJsonBody(request);
-  const { name, normalizedPhone } = validateAuthPayload(requestBody);
+  const { name, email } = validateAuthPayload(requestBody);
   const code = validateOtpCode(requestBody?.code);
 
-  await verifyPhoneCode(normalizedPhone, code);
+  await verifyEmailCode({ email, code });
 
   const userRecord = await findOrCreateUser({
     name,
-    normalizedPhone,
+    email,
   });
   const session = await createSessionForUser(userRecord.id);
 
@@ -1591,6 +1821,7 @@ const initializeDatabaseSchema = async () => {
   try {
     await ensureDatabaseSchema();
     await deleteExpiredSessions();
+    await deleteExpiredEmailCodes();
     console.log("[budget-planner-backend] Database schema is ready.");
   } catch (error) {
     console.error(
@@ -1624,9 +1855,15 @@ const startServer = async () => {
       }
     }
 
-    if (!twilioClient) {
+    if (config.emailProvider !== "resend" || !config.resendApiKey || !config.authEmailFrom) {
       console.warn(
-        "[budget-planner-backend] Twilio Verify is not configured. SMS verification will be unavailable.",
+        "[budget-planner-backend] Resend email auth is not configured. Email verification will be unavailable.",
+      );
+    }
+
+    if (!config.hasStaticOtpSecret) {
+      console.warn(
+        "[budget-planner-backend] AUTH_OTP_SECRET is missing. Pending email codes will reset after server restart.",
       );
     }
 
