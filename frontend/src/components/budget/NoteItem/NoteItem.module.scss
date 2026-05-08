@@ -102,6 +102,7 @@
 }
 
 .deleteButton {
+  position: relative;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -113,13 +114,33 @@
   transition: background-color var(--transition-fast);
 }
 
-.deleteButton:hover {
-  background: #ffcccc;
+.deleteIcon {
+  position: absolute;
+  width: rem(15);
+  height: rem(22);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.deleteIcon {
-  color: var(--color-accent-red);
-  font-size: rem(16);
+.deleteIconOpen {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIcon,
+.deleteButton:focus-visible .deleteIcon {
+  transform: scale(1.08);
+}
+
+.deleteButton:hover .deleteIconClosed,
+.deleteButton:focus-visible .deleteIconClosed {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIconOpen,
+.deleteButton:focus-visible .deleteIconOpen {
+  opacity: 1;
 }
 
 @media (max-width: 768px) {

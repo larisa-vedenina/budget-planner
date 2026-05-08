@@ -268,21 +268,43 @@
 }
 
 .deleteButton {
+  position: relative;
   cursor: pointer;
   padding: rem(4);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: rem(32);
+  height: rem(32);
 }
 
 .deleteIcon {
-  color: var(--color-accent-red);
-  font-size: rem(28);
-  transition: transform var(--transition-fast);
+  position: absolute;
+  width: rem(24);
+  height: rem(28);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.deleteButton:hover .deleteIcon {
+.deleteIconOpen {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIcon,
+.deleteButton:focus-visible .deleteIcon {
   transform: scale(1.08);
+}
+
+.deleteButton:hover .deleteIconClosed,
+.deleteButton:focus-visible .deleteIconClosed {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIconOpen,
+.deleteButton:focus-visible .deleteIconOpen {
+  opacity: 1;
 }
 
 @media (max-width: 768px) {

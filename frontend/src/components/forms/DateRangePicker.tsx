@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { Box, IconButton, Popover, Typography } from "@mui/material";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { PickerDay, PickerDayProps } from "@mui/x-date-pickers/PickerDay";
@@ -12,6 +11,7 @@ import {
   parseISO,
 } from "date-fns";
 import { ru } from "date-fns/locale";
+import { publicImageSrc } from "../../utils/publicImageSrc";
 import styles from "./DateRangePicker.module.scss";
 
 interface DateRangePickerProps {
@@ -27,6 +27,8 @@ interface RangePickerDayProps extends PickerDayProps {
   previewStart?: Date | null;
   previewEnd?: Date | null;
 }
+
+const calendarIconSrc = publicImageSrc("calendar.png");
 
 // Пропускаем только валидные даты, чтобы диапазон не ломался на пустых значениях.
 const isValidDate = (value: Date | null | undefined): value is Date =>
@@ -235,7 +237,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             disableRipple
             aria-label="Открыть календарь"
           >
-            <CalendarMonthOutlinedIcon />
+            <img
+              src={calendarIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={styles.calendarIcon}
+            />
           </IconButton>
         </Box>
 

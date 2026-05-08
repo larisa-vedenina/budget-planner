@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { NoteModel } from "../../../types/note";
 import { Box } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./NoteItem.module.scss";
 
 interface DragHandleProps {
@@ -10,6 +10,9 @@ interface DragHandleProps {
   listeners?: Record<string, any>;
   ref?: (element: HTMLButtonElement | null) => void;
 }
+
+const trashIconSrc = publicImageSrc("trash.png");
+const trashOpenIconSrc = publicImageSrc("trash_open.png");
 
 interface NoteItemProps {
   note: NoteModel;
@@ -131,7 +134,18 @@ export const NoteItem: React.FC<NoteItemProps> = ({
             className={styles.deleteButton}
             title="Удалить заметку"
           >
-            <DeleteIcon className={styles.deleteIcon} />
+            <img
+              src={trashIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.deleteIcon} ${styles.deleteIconClosed}`}
+            />
+            <img
+              src={trashOpenIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.deleteIcon} ${styles.deleteIconOpen}`}
+            />
           </Box>
         </Box>
       )}

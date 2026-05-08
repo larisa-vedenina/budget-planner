@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChecklistItemModel } from "../../../types/checklist-item";
 import { Box } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { pxToRem } from "../../../styles/units";
+import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./ChecklistItem.module.scss";
 
 interface DragHandleProps {
@@ -13,6 +13,9 @@ interface DragHandleProps {
   listeners?: Record<string, any>;
   ref?: (element: HTMLButtonElement | null) => void;
 }
+
+const trashIconSrc = publicImageSrc("trash.png");
+const trashOpenIconSrc = publicImageSrc("trash_open.png");
 
 interface ChecklistItemProps {
   item: ChecklistItemModel;
@@ -281,7 +284,18 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             className={styles.deleteButton}
             title="Удалить пункт"
           >
-            <DeleteIcon className={styles.deleteIcon} />
+            <img
+              src={trashIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.deleteIcon} ${styles.deleteIconClosed}`}
+            />
+            <img
+              src={trashOpenIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.deleteIcon} ${styles.deleteIconOpen}`}
+            />
           </div>
         </Box>
       )}

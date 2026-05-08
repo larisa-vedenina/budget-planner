@@ -21,10 +21,9 @@
   transition: transform 0.3s ease;
 }
 
-.buttonUnlocked .iconWrap {
-  transform: rotate(180deg);
-}
-
 .icon {
-  color: var(--lock-color);
+  display: block;
+  width: var(--lock-icon-size);
+  height: var(--lock-icon-size);
+  object-fit: contain;
 }
