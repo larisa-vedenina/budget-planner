@@ -1,6 +1,5 @@
 import React from 'react';
-import LockIcon from '@mui/icons-material/Lock';
-import LockOpenIcon from '@mui/icons-material/LockOpen';
+import { publicImageSrc } from "../../utils/publicImageSrc";
 import styles from "./LockToggle.module.scss";
 
 interface LockToggleProps {
@@ -21,7 +20,9 @@ export const LockToggle: React.FC<LockToggleProps> = ({
   };
 
   const { icon: iconSize, button: buttonSize } = sizeMap[size];
-  const lockColor = isLocked ? "#D87B7B" : "#507B5D";
+  const iconSrc = isLocked
+    ? publicImageSrc("lock.png")
+    : publicImageSrc("lock_open.png");
 
   return (
     <button
@@ -30,25 +31,15 @@ export const LockToggle: React.FC<LockToggleProps> = ({
       className={`${styles.button} ${!isLocked ? styles.buttonUnlocked : ""}`}
       style={
         {
-          "--lock-size": `${buttonSize / 16}rem`,
-          "--lock-color": lockColor,
+          "--lock-size": `${buttonSize / 25}rem`,
+          "--lock-icon-size": `${iconSize / 10}rem`,
         } as React.CSSProperties
       }
       aria-label={isLocked ? 'Разблокировать редактирование' : 'Заблокировать редактирование'}
       title={isLocked ? 'Нажмите для редактирования' : 'Нажмите для завершения редактирования'}
     >
       <div className={styles.iconWrap}>
-        {isLocked ? (
-          <LockIcon
-            className={styles.icon}
-            style={{ fontSize: iconSize }}
-          />
-        ) : (
-          <LockOpenIcon
-            className={styles.icon}
-            style={{ fontSize: iconSize }}
-          />
-        )}
+        <img src={iconSrc} alt="" aria-hidden="true" className={styles.icon} />
       </div>
     </button>
   );

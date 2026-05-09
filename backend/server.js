@@ -4,21 +4,35 @@ const http = require("http");
 const https = require("https");
 const path = require("path");
 const { Pool } = require("pg");
-const twilio = require("twilio");
 
 const DEFAULT_PORT = 8787;
-const DEFAULT_PROVIDER = "deepseek";
-const DEFAULT_MODEL = "deepseek-chat";
+const DEFAULT_PROVIDER = "gemini";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
+const DEFAULT_EMAIL_PROVIDER = "resend";
 const DEFAULT_ALLOWED_ORIGIN = "http://localhost:3000";
 const DEFAULT_AUTH_COOKIE_NAME = "budget_planner_session";
+const DEFAULT_DATABASE_POOL_MAX = 5;
+const DEFAULT_DATABASE_CONNECTION_TIMEOUT_MS = 10_000;
+const DEFAULT_DATABASE_IDLE_TIMEOUT_MS = 30_000;
+const DATABASE_SCHEMA_VERSION = "2026_05_08_001_email_auth_resend";
 const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_JSON_BODY_BYTES = 5 * 1024 * 1024;
+const SIMPLE_AI_NOTES_LIMIT = 2;
+const DEFAULT_AI_NOTES_LIMIT = 4;
+const RICH_AI_NOTES_LIMIT = 5;
+const MAX_AI_WARNINGS = 2;
 const DEEPSEEK_CHAT_COMPLETIONS_URL = "https://api.deepseek.com/chat/completions";
+const GEMINI_GENERATE_CONTENT_BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta";
+const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 const FRONTEND_BUILD_DIR = path.resolve(__dirname, "../frontend/build");
 
 const BUDGET_PLAN_EXAMPLE = {
-  summary: "Короткий общий вывод по бюджету пользователя.",
+  summary: "У тебя остается 37000 ₽ после обязательных и необязательных расходов.",
   totals: {
     incomeTotal: 120000,
     requiredTotal: 65000,
@@ -31,21 +45,29 @@ const BUDGET_PLAN_EXAMPLE = {
       amount: 35000,
       priority: true,
     },
+    {
+      title: "Еда и быт",
+      amount: 22000,
+      priority: true,
+    },
+    {
+      title: "Платеж по долгу",
+      amount: 8000,
+      priority: true,
+    },
   ],
   desiredItems: [
     {
-      title: "Кафе",
-      amount: 5000,
+      title: "Цель",
+      amount: 18000,
       priority: false,
     },
   ],
   notes: [
-    "Держите резерв на непредвиденные траты.",
-    "Необязательные расходы лучше ограничить фиксированным лимитом.",
+    "На еду, транспорт и бытовые мелочи заложено 22000 ₽, это около 710 ₽ в день.",
+    "На цель можно отложить 18000 ₽ сейчас и оставить 37000 ₽ резервом.",
   ],
-  warnings: [
-    "Если доход задержится, часть необязательных трат придется сократить.",
-  ],
+  warnings: [],
 };
 
 const loadEnvFile = () => {
@@ -80,47 +102,210 @@ const loadEnvFile = () => {
 
 loadEnvFile();
 
+const getIntegerEnv = (key, fallbackValue) => {
+  const parsedValue = Number.parseInt(process.env[key] || "", 10);
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
+};
+
+const parseDatabaseSsl = () => {
+  const rawValue = String(process.env.DATABASE_SSL || "").trim().toLowerCase();
+
+  if (["true", "require", "required"].includes(rawValue)) {
+    return true;
+  }
+
+  if (["false", "disable", "disabled"].includes(rawValue)) {
+    return false;
+  }
+
+  return Boolean(process.env.RENDER);
+};
+
+const getDatabaseUrlError = (databaseUrl) => {
+  if (!databaseUrl) {
+    return "";
+  }
+
+  try {
+    const protocol = new URL(databaseUrl).protocol;
+
+    if (!["postgres:", "postgresql:"].includes(protocol)) {
+      return "DATABASE_URL должен быть PostgreSQL connection string: postgres:// или postgresql://.";
+    }
+  } catch (error) {
+    return "DATABASE_URL некорректен. Проверьте строку подключения к PostgreSQL.";
+  }
+
+  return "";
+};
+
+const getDatabaseHost = (databaseUrl) => {
+  if (!databaseUrl) {
+    return "";
+  }
+
+  try {
+    return new URL(databaseUrl).hostname.toLowerCase();
+  } catch (error) {
+    return "";
+  }
+};
+
+const detectDatabaseProvider = (databaseUrl) => {
+  const host = getDatabaseHost(databaseUrl);
+
+  if (!host) {
+    return "not_configured";
+  }
+
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "local-postgres";
+  }
+
+  if (host.includes("neon.tech")) {
+    return "neon";
+  }
+
+  if (host.includes("supabase.co") || host.includes("pooler.supabase.com")) {
+    return "supabase";
+  }
+
+  if (host.includes("render.com")) {
+    return "render-postgres";
+  }
+
+  return "postgres";
+};
+
+const normalizeProvider = (provider) => {
+  const normalizedProvider = String(provider || DEFAULT_PROVIDER)
+    .trim()
+    .toLowerCase();
+
+  if (["gemini", "google", "google-gemini"].includes(normalizedProvider)) {
+    return "gemini";
+  }
+
+  if (normalizedProvider === "deepseek") {
+    return "deepseek";
+  }
+
+  return normalizedProvider;
+};
+
+const getProviderApiKey = (provider) => {
+  if (provider === "gemini") {
+    return (
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.AI_API_KEY ||
+      ""
+    );
+  }
+
+  if (provider === "deepseek") {
+    return (
+      process.env.DEEPSEEK_API_KEY ||
+      process.env.AI_API_KEY ||
+      process.env.OPENAI_API_KEY ||
+      ""
+    );
+  }
+
+  return process.env.AI_API_KEY || "";
+};
+
+const getProviderModel = (provider) => {
+  if (provider === "gemini") {
+    return (
+      process.env.GEMINI_MODEL ||
+      process.env.GOOGLE_MODEL ||
+      process.env.AI_MODEL ||
+      DEFAULT_GEMINI_MODEL
+    );
+  }
+
+  if (provider === "deepseek") {
+    return (
+      process.env.DEEPSEEK_MODEL ||
+      process.env.AI_MODEL ||
+      process.env.OPENAI_MODEL ||
+      DEFAULT_DEEPSEEK_MODEL
+    );
+  }
+
+  return process.env.AI_MODEL || DEFAULT_GEMINI_MODEL;
+};
+
+const normalizeEmailProvider = (providerName) => {
+  const normalizedProviderName = String(providerName || DEFAULT_EMAIL_PROVIDER)
+    .trim()
+    .toLowerCase();
+
+  if (["resend", "resend-email"].includes(normalizedProviderName)) {
+    return "resend";
+  }
+
+  return normalizedProviderName;
+};
+
+const provider = normalizeProvider(process.env.LLM_PROVIDER);
+const emailProvider = normalizeEmailProvider(process.env.EMAIL_PROVIDER);
+const runtimeOtpSecret =
+  process.env.AUTH_OTP_SECRET || crypto.randomBytes(32).toString("hex");
+
 const config = {
-  provider: process.env.LLM_PROVIDER || DEFAULT_PROVIDER,
+  provider,
+  emailProvider,
   host: process.env.HOST || (process.env.RENDER ? "0.0.0.0" : "127.0.0.1"),
   port: Number.parseInt(process.env.PORT || `${DEFAULT_PORT}`, 10) || DEFAULT_PORT,
-  apiKey:
-    process.env.DEEPSEEK_API_KEY ||
-    process.env.AI_API_KEY ||
-    process.env.OPENAI_API_KEY ||
-    "",
-  model:
-    process.env.DEEPSEEK_MODEL ||
-    process.env.AI_MODEL ||
-    process.env.OPENAI_MODEL ||
-    DEFAULT_MODEL,
+  apiKey: getProviderApiKey(provider),
+  model: getProviderModel(provider),
   allowedOrigin: process.env.ALLOWED_ORIGIN || DEFAULT_ALLOWED_ORIGIN,
   databaseUrl: process.env.DATABASE_URL || "",
-  databaseSsl:
-    process.env.DATABASE_SSL === "true" ||
-    (process.env.DATABASE_SSL !== "false" && Boolean(process.env.RENDER)),
+  databaseSsl: parseDatabaseSsl(),
+  databasePoolMax: getIntegerEnv(
+    "DATABASE_POOL_MAX",
+    DEFAULT_DATABASE_POOL_MAX,
+  ),
+  databaseConnectionTimeoutMs: getIntegerEnv(
+    "DATABASE_CONNECTION_TIMEOUT_MS",
+    DEFAULT_DATABASE_CONNECTION_TIMEOUT_MS,
+  ),
+  databaseIdleTimeoutMs: getIntegerEnv(
+    "DATABASE_IDLE_TIMEOUT_MS",
+    DEFAULT_DATABASE_IDLE_TIMEOUT_MS,
+  ),
   authCookieName: process.env.AUTH_COOKIE_NAME || DEFAULT_AUTH_COOKIE_NAME,
   cookieSecure:
     process.env.COOKIE_SECURE === "true" ||
     (process.env.COOKIE_SECURE !== "false" && Boolean(process.env.RENDER)),
-  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
-  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
-  twilioVerifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "",
+  resendApiKey: process.env.RESEND_API_KEY || "",
+  authEmailFrom: process.env.AUTH_EMAIL_FROM || "",
+  authOtpSecret: runtimeOtpSecret,
+  hasStaticOtpSecret: Boolean(process.env.AUTH_OTP_SECRET),
 };
 
-const pool = config.databaseUrl
+config.databaseUrlError = getDatabaseUrlError(config.databaseUrl);
+config.databaseProvider = detectDatabaseProvider(config.databaseUrl);
+
+const pool = config.databaseUrl && !config.databaseUrlError
   ? new Pool({
       connectionString: config.databaseUrl,
       ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
+      max: config.databasePoolMax,
+      connectionTimeoutMillis: config.databaseConnectionTimeoutMs,
+      idleTimeoutMillis: config.databaseIdleTimeoutMs,
     })
   : null;
 
-const twilioClient =
-  config.twilioAccountSid &&
-  config.twilioAuthToken &&
-  config.twilioVerifyServiceSid
-    ? twilio(config.twilioAccountSid, config.twilioAuthToken)
-    : null;
+if (pool) {
+  pool.on("error", (error) => {
+    console.error("[budget-planner-backend] Database pool error:", error.message);
+  });
+}
 
 const canServeFrontend = () =>
   fs.existsSync(path.join(FRONTEND_BUILD_DIR, "index.html"));
@@ -328,59 +513,28 @@ const buildExpiredSessionCookie = () =>
     maxAge: 0,
   });
 
-const getDigits = (value) => String(value || "").replace(/\D/g, "");
-
-const normalizePhone = (value) => {
-  const digits = getDigits(value);
-
-  if (digits.length === 11 && (digits.startsWith("7") || digits.startsWith("8"))) {
-    return `7${digits.slice(1)}`;
-  }
-
-  if (digits.length === 10) {
-    return `7${digits}`;
-  }
-
-  return digits.slice(0, 11);
-};
-
-const formatPhoneDisplay = (value) => {
-  const normalizedPhone = normalizePhone(value);
-
-  if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith("7")) {
-    return value;
-  }
-
-  const nationalDigits = normalizedPhone.slice(1);
-
-  return `+7 (${nationalDigits.slice(0, 3)}) ${nationalDigits.slice(
-    3,
-    6,
-  )}-${nationalDigits.slice(6, 8)}-${nationalDigits.slice(8, 10)}`;
-};
-
-const toE164Phone = (value) => {
-  const normalizedPhone = normalizePhone(value);
-  return normalizedPhone ? `+${normalizedPhone}` : "";
-};
-
 const sanitizeName = (value) => String(value || "").trim();
+
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+
+const isValidEmail = (value) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 
 const validateAuthPayload = (payload) => {
   const name = sanitizeName(payload?.name);
-  const normalizedPhone = normalizePhone(payload?.phone);
+  const email = normalizeEmail(payload?.email);
 
   if (name.length < 2) {
     throw createHttpError("Укажите имя длиной не меньше 2 символов.", 400);
   }
 
-  if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith("7")) {
-    throw createHttpError("Введите номер телефона полностью.", 400);
+  if (!isValidEmail(email)) {
+    throw createHttpError("Введите корректную почту.", 400);
   }
 
   return {
     name,
-    normalizedPhone,
+    email,
   };
 };
 
@@ -397,16 +551,43 @@ const validateOtpCode = (value) => {
 const hashToken = (token) =>
   crypto.createHash("sha256").update(String(token)).digest("hex");
 
+const hashOtpCode = (email, code) =>
+  crypto
+    .createHmac("sha256", config.authOtpSecret)
+    .update(`${normalizeEmail(email)}:${String(code).trim()}`)
+    .digest("hex");
+
+const isHashMatch = (firstHash, secondHash) => {
+  const firstBuffer = Buffer.from(String(firstHash || ""), "hex");
+  const secondBuffer = Buffer.from(String(secondHash || ""), "hex");
+
+  return (
+    firstBuffer.length === secondBuffer.length &&
+    crypto.timingSafeEqual(firstBuffer, secondBuffer)
+  );
+};
+
 const requireDatabase = () => {
+  if (config.databaseUrlError) {
+    throw createHttpError(config.databaseUrlError, 500);
+  }
+
   if (!pool) {
     throw createHttpError("База данных не настроена. Добавьте DATABASE_URL.", 500);
   }
 };
 
-const requireTwilioVerify = () => {
-  if (!twilioClient) {
+const requireResendEmail = () => {
+  if (config.emailProvider !== "resend") {
     throw createHttpError(
-      "Twilio Verify не настроен. Добавьте TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN и TWILIO_VERIFY_SERVICE_SID.",
+      `Email-провайдер ${config.emailProvider} не поддерживается.`,
+      500,
+    );
+  }
+
+  if (!config.resendApiKey || !config.authEmailFrom) {
+    throw createHttpError(
+      "Resend не настроен. Добавьте RESEND_API_KEY и AUTH_EMAIL_FROM.",
       500,
     );
   }
@@ -418,16 +599,59 @@ const ensureDatabaseSchema = async () => {
   }
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    INSERT INTO schema_migrations (id)
+    VALUES ('${DATABASE_SCHEMA_VERSION}')
+    ON CONFLICT (id) DO NOTHING;
+
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       login TEXT NOT NULL,
-      phone TEXT NOT NULL UNIQUE,
-      email TEXT,
+      phone TEXT,
+      email TEXT NOT NULL UNIQUE,
       avatar_url TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_login TIMESTAMPTZ
     );
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS email TEXT;
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS phone TEXT;
+
+    UPDATE users
+    SET email = LOWER(TRIM(email))
+    WHERE email IS NOT NULL;
+
+    UPDATE users
+    SET email = id || '@budget.local'
+    WHERE email IS NULL OR TRIM(email) = '';
+
+    WITH duplicated_user_emails AS (
+      SELECT email
+      FROM users
+      WHERE email IS NOT NULL
+      GROUP BY email
+      HAVING COUNT(*) > 1
+    )
+    UPDATE users
+    SET email = id || '@budget.local'
+    WHERE email IN (SELECT email FROM duplicated_user_emails);
+
+    ALTER TABLE users
+      ALTER COLUMN email SET NOT NULL;
+
+    ALTER TABLE users
+      ALTER COLUMN phone DROP NOT NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_idx
+      ON users (email);
 
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id TEXT PRIMARY KEY,
@@ -444,6 +668,22 @@ const ensureDatabaseSchema = async () => {
     CREATE INDEX IF NOT EXISTS auth_sessions_token_hash_idx
       ON auth_sessions (token_hash);
 
+    CREATE TABLE IF NOT EXISTS auth_email_codes (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS auth_email_codes_email_created_at_idx
+      ON auth_email_codes (email, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS auth_email_codes_expires_at_idx
+      ON auth_email_codes (expires_at);
+
     CREATE TABLE IF NOT EXISTS budget_snapshots (
       user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       current_budget JSONB,
@@ -451,14 +691,39 @@ const ensureDatabaseSchema = async () => {
       edit_mode BOOLEAN NOT NULL DEFAULT FALSE,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE INDEX IF NOT EXISTS budget_snapshots_updated_at_idx
+      ON budget_snapshots (updated_at DESC);
+  `);
+};
+
+const deleteExpiredSessions = async () => {
+  if (!pool) {
+    return;
+  }
+
+  await pool.query(`
+    DELETE FROM auth_sessions
+    WHERE expires_at <= NOW()
+  `);
+};
+
+const deleteExpiredEmailCodes = async () => {
+  if (!pool) {
+    return;
+  }
+
+  await pool.query(`
+    DELETE FROM auth_email_codes
+    WHERE expires_at <= NOW()
+      OR consumed_at IS NOT NULL
   `);
 };
 
 const mapUserRecord = (row) => ({
   id: row.id,
   login: row.login,
-  phone: formatPhoneDisplay(row.phone),
-  email: row.email || undefined,
+  email: row.email,
   avatarUrl: row.avatar_url || undefined,
   name: row.name,
   createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
@@ -468,17 +733,17 @@ const mapUserRecord = (row) => ({
       : row.last_login || undefined,
 });
 
-const findOrCreateUser = async ({ name, normalizedPhone }) => {
+const findOrCreateUser = async ({ name, email }) => {
   requireDatabase();
 
   const existingUserResult = await pool.query(
     `
       SELECT *
       FROM users
-      WHERE phone = $1
+      WHERE email = $1
       LIMIT 1
     `,
-    [normalizedPhone],
+    [email],
   );
 
   if (existingUserResult.rows[0]) {
@@ -500,15 +765,14 @@ const findOrCreateUser = async ({ name, normalizedPhone }) => {
 
   const newUserResult = await pool.query(
     `
-      INSERT INTO users (id, name, login, phone, email, created_at, last_login)
-      VALUES ($1, $2, $2, $3, $4, NOW(), NOW())
+      INSERT INTO users (id, name, login, email, created_at, last_login)
+      VALUES ($1, $2, $2, $3, NOW(), NOW())
       RETURNING *
     `,
     [
       `user_${crypto.randomUUID()}`,
       name,
-      normalizedPhone,
-      `${normalizedPhone}@budget.local`,
+      email,
     ],
   );
 
@@ -683,21 +947,126 @@ const saveBudgetSnapshotForUser = async (userId, snapshot) => {
 const sumAmounts = (items = []) =>
   items.reduce((sum, item) => sum + Math.max(0, Number(item.amount) || 0), 0);
 
+const parseBudgetDate = (value) => {
+  const date = new Date(`${String(value || "").slice(0, 10)}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getPeriodDays = (period = {}) => {
+  const startDate = parseBudgetDate(period.startDate);
+  const endDate = parseBudgetDate(period.endDate);
+
+  if (!startDate || !endDate || endDate < startDate) {
+    return 0;
+  }
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.round((endDate.getTime() - startDate.getTime()) / dayMs) + 1;
+};
+
+const hasMeaningfulInputItem = (item = {}) =>
+  Boolean(
+    normalizeAiText(item.text) ||
+      normalizeAiText(item.comment) ||
+      Math.max(0, Number(item.amount) || 0) > 0,
+  );
+
+const getMeaningfulItems = (items = []) =>
+  Array.isArray(items) ? items.filter(hasMeaningfulInputItem) : [];
+
+const countMeaningfulItems = (sections = {}) =>
+  Object.values(sections).reduce(
+    (count, items) => count + getMeaningfulItems(items).length,
+    0,
+  );
+
+const getContextItemsCount = (sections = {}) =>
+  ["assets", "debts", "goals"].reduce(
+    (count, key) => count + getMeaningfulItems(sections[key]).length,
+    0,
+  );
+
+const getAiNotesLimit = (payload = {}) => {
+  const meaningfulItemsCount = countMeaningfulItems(payload.sections);
+  const contextItemsCount = getContextItemsCount(payload.sections);
+
+  if (meaningfulItemsCount <= 4 && contextItemsCount === 0) {
+    return SIMPLE_AI_NOTES_LIMIT;
+  }
+
+  if (meaningfulItemsCount <= 8 && contextItemsCount <= 1) {
+    return DEFAULT_AI_NOTES_LIMIT;
+  }
+
+  return RICH_AI_NOTES_LIMIT;
+};
+
+const hasExpenseMatch = (items = [], pattern) =>
+  getMeaningfulItems(items).some((item) =>
+    pattern.test(`${item.text || ""} ${item.comment || ""}`.toLowerCase()),
+  );
+
+const hasEverydayExpenses = (sections = {}) => {
+  const everydayExpensePattern =
+    /(еда|продукт|питан|обед|ужин|кафе|кофе|транспорт|проезд|метро|автобус|такси|бензин|топлив|быт|аптек|лекарств)/i;
+  return hasExpenseMatch(
+    [...(sections.required || []), ...(sections.desired || [])],
+    everydayExpensePattern,
+  );
+};
+
+const hasReplacementCharacter = (value) => String(value || "").includes("\uFFFD");
+
+const normalizeAiText = (value, options = {}) => {
+  const rawValue = String(value || "");
+
+  if (options.dropInvalid && hasReplacementCharacter(rawValue)) {
+    return "";
+  }
+
+  return rawValue
+    .normalize("NFC")
+    .replace(/\uFFFD+/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/[ \t\r\n]+/g, " ")
+    .trim();
+};
+
+const normalizeAiTextList = (items = [], limit) => {
+  const seenNotes = new Set();
+
+  return items
+    .map((item) => normalizeAiText(item, { dropInvalid: true }))
+    .filter(Boolean)
+    .filter((item) => {
+      const key = item.toLowerCase();
+
+      if (seenNotes.has(key)) {
+        return false;
+      }
+
+      seenNotes.add(key);
+      return true;
+    })
+    .slice(0, limit);
+};
+
 const normalizeInputItem = (item = {}) => ({
-  text: String(item.text || "").trim(),
+  text: normalizeAiText(item.text),
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
-  comment: String(item.comment || "").trim(),
+  comment: normalizeAiText(item.comment),
 });
 
 const normalizePlanItem = (item = {}) => ({
-  title: String(item.title || "").trim(),
+  title: normalizeAiText(item.title),
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
   priority: Boolean(item.priority),
 });
 
 const normalizePlan = (plan = {}, requestPayload) => {
+  const notesLimit = getAiNotesLimit(requestPayload);
   const normalizedPlan = {
-    summary: String(plan.summary || "").trim(),
+    summary: normalizeAiText(plan.summary),
     totals: {
       incomeTotal: Math.max(0, Math.round(Number(plan?.totals?.incomeTotal) || 0)),
       requiredTotal: Math.max(0, Math.round(Number(plan?.totals?.requiredTotal) || 0)),
@@ -711,10 +1080,10 @@ const normalizePlan = (plan = {}, requestPayload) => {
       ? plan.desiredItems.map(normalizePlanItem).filter((item) => item.title)
       : [],
     notes: Array.isArray(plan.notes)
-      ? plan.notes.map((note) => String(note || "").trim()).filter(Boolean)
+      ? normalizeAiTextList(plan.notes, notesLimit)
       : [],
     warnings: Array.isArray(plan.warnings)
-      ? plan.warnings.map((note) => String(note || "").trim()).filter(Boolean)
+      ? normalizeAiTextList(plan.warnings, MAX_AI_WARNINGS)
       : [],
   };
 
@@ -790,26 +1159,39 @@ const buildSystemPrompt = () => `
 
 Твоя задача:
 - на основе данных пользователя составить реалистичный и подробный план бюджета;
-- распределить траты по двум категориям: обязательные и необязательные;
+- распределить траты по двум категориям: обязательные и необязательные, с конкретными суммами;
 - уважать ограничение по доходу, если это возможно;
 - если обязательные траты уже превышают доход, сохранить важные обязательные траты и явно предупредить о дефиците в warnings;
 - использовать активы, долги, цели и свободный комментарий пользователя для приоритизации и рекомендаций;
 - писать на русском языке;
+- обращаться к пользователю на "ты"; не использовать "вы", "ваш", "рассмотрите";
 - делать названия пунктов короткими и удобными для UI карточек;
 - если в названии важно указать срок, добавляй его кратко в скобках;
 - не выдумывать источники дохода, которых нет во входных данных;
 - не добавлять комментариев вне JSON.
 
 Правила качества плана:
-- обязательные траты должны покрывать критически важные потребности;
+- обязательные траты должны покрывать критически важные потребности и регулярные платежи;
+- еду, транспорт, лекарства и бытовые мелочи нужно закладывать в requiredItems как базовые расходы, если пользователь не указал их явно;
+- если точной суммы на базовые расходы нет, оцени ее осторожно по доходу, периоду и свободному остатку; не превышай доступный бюджет;
+- если пользователь указал долги, добавь платеж по долгу в requiredItems. Если указана сумма долга, но нет платежа на период, предложи посильный платеж и объясни это в notes;
+- если в долге есть кому, когда или сколько платить, обязательно используй это в названии пункта или в notes;
+- если пользователь указал цель, добавь посильный взнос на цель в desiredItems, если это не ломает обязательные расходы и резерв;
+- если пользователь указал активы, не превращай их автоматически в доход; дай в notes конкретный совет, как использовать актив или почему лучше его не трогать;
 - необязательные траты можно сокращать, объединять или откладывать ради баланса;
-- если после обязательных трат остается запас, можно оставить часть в резерве и объяснить это в notes;
-- notes должны быть практичными и конкретными, 3-6 пунктов;
-- warnings заполняй только если есть риск, дефицит, спорное допущение или конфликт данных.
+- если после расходов остается резерв, рассчитай, как его использовать: дневной лимит, накопление, подушка или цель;
+- summary: один короткий вывод до 180 символов, без общих фраз;
+- notes: количество зависит от данных; если данных мало, достаточно 1-2 пунктов notes, чтобы вместе с summary получилось до 3 карточек; если есть долги, активы, цели или важный комментарий, можно добавить больше, но без воды;
+- каждый пункт notes должен содержать расчет, лимит, дату, сумму или конкретное действие;
+- warnings: это не советы, а только риски. Заполняй warnings, если есть дефицит, нестабильный доход, долг без понятного платежа, просрочка, обязательные расходы выше дохода или конфликт данных;
+- не повторяй одну и ту же мысль в summary, notes и warnings;
+- не пиши общие советы вроде "стоит добавить регулярные расходы", если можно дать расчет;
+- не используй emoji, markdown, кавычки-елочки, спецсимволы, символ � или декоративные знаки; допустимы только обычная русская пунктуация, цифры и знак ₽.
 - ответ должен быть только одним валидным json-объектом без markdown и пояснений вне json.
 `.trim();
 
 const buildUserPrompt = (payload) => {
+  const notesLimit = getAiNotesLimit(payload);
   const totals = {
     incomeTotal: sumAmounts(payload.sections.income),
     requiredInputTotal: sumAmounts(payload.sections.required),
@@ -817,12 +1199,20 @@ const buildUserPrompt = (payload) => {
     assetsTotal: sumAmounts(payload.sections.assets),
     debtsTotal: sumAmounts(payload.sections.debts),
     goalsTotal: sumAmounts(payload.sections.goals),
+    periodDays: getPeriodDays(payload.period),
+    meaningfulItemsCount: countMeaningfulItems(payload.sections),
+    contextItemsCount: getContextItemsCount(payload.sections),
+    everydayExpensesAlreadyProvided: hasEverydayExpenses(payload.sections),
   };
 
   return [
     "Составь план бюджета на основе этих данных пользователя.",
     "Верни только валидный json-объект.",
     "Используй строго эти ключи верхнего уровня: summary, totals, requiredItems, desiredItems, notes, warnings.",
+    `Ориентир для notes по этим данным: до ${notesLimit} пунктов. Не добавляй пункт ради количества.`,
+    `В warnings верни не больше ${MAX_AI_WARNINGS} пунктов и только реальные риски.`,
+    "В requiredItems заложи еду, транспорт и бытовые мелочи, если их нет во входных расходах. В notes дай дневной лимит по этим тратам.",
+    "Если есть цель, рассчитай посильный взнос на нее. Если есть долги, отрази платеж в обязательных тратах. Если есть активы, дай практичный совет по их использованию.",
     "Формат объекта-образца:",
     JSON.stringify(BUDGET_PLAN_EXAMPLE, null, 2),
     "",
@@ -838,10 +1228,11 @@ const buildUserPrompt = (payload) => {
   ].join("\n");
 };
 
-const postJson = (url, payload, headers = {}) =>
+const postJson = (url, payload, headers = {}, options = {}) =>
   new Promise((resolve, reject) => {
     const targetUrl = new URL(url);
     const body = JSON.stringify(payload);
+    const serviceName = options.serviceName || "Внешний сервис";
 
     const upstreamRequest = https.request(
       {
@@ -869,13 +1260,15 @@ const postJson = (url, payload, headers = {}) =>
           try {
             parsedResponse = rawResponse ? JSON.parse(rawResponse) : {};
           } catch (error) {
-            reject(createHttpError("AI provider returned invalid JSON.", 502));
+            reject(createHttpError(`${serviceName} вернул некорректный JSON.`, 502));
             return;
           }
 
           if ((upstreamResponse.statusCode || 500) >= 400) {
             const upstreamError = createHttpError(
-              parsedResponse?.error?.message || "AI provider request failed.",
+              parsedResponse?.error?.message ||
+                parsedResponse?.message ||
+                `${serviceName} вернул ошибку.`,
               upstreamResponse.statusCode || 500,
             );
             reject(upstreamError);
@@ -905,11 +1298,73 @@ const extractChatCompletionText = (providerResponse) => {
   throw createHttpError("AI response does not contain message content.", 502);
 };
 
-const generateBudgetPlan = async (payload) => {
-  if (!config.apiKey) {
-    throw createHttpError("AI API key is not configured.", 500);
+const getGeminiModelName = (model) =>
+  String(model || DEFAULT_GEMINI_MODEL)
+    .trim()
+    .replace(/^models\//, "");
+
+const buildGeminiGenerateContentUrl = (model) =>
+  `${GEMINI_GENERATE_CONTENT_BASE_URL}/models/${encodeURIComponent(
+    getGeminiModelName(model),
+  )}:generateContent`;
+
+const extractGeminiContentText = (providerResponse) => {
+  const firstCandidate = Array.isArray(providerResponse?.candidates)
+    ? providerResponse.candidates[0]
+    : null;
+
+  const parts = Array.isArray(firstCandidate?.content?.parts)
+    ? firstCandidate.content.parts
+    : [];
+
+  const content = parts
+    .map((part) => (typeof part.text === "string" ? part.text : ""))
+    .join("")
+    .trim();
+
+  if (content) {
+    return content;
   }
 
+  const blockReason =
+    providerResponse?.promptFeedback?.blockReason ||
+    firstCandidate?.finishReason ||
+    "unknown";
+
+  throw createHttpError(
+    `Gemini response does not contain message content. Reason: ${blockReason}.`,
+    502,
+  );
+};
+
+const parseJsonPlanText = (rawPlanText) => {
+  const cleanedPlanText = String(rawPlanText || "")
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleanedPlanText);
+  } catch (error) {
+    const firstBraceIndex = cleanedPlanText.indexOf("{");
+    const lastBraceIndex = cleanedPlanText.lastIndexOf("}");
+
+    if (firstBraceIndex !== -1 && lastBraceIndex > firstBraceIndex) {
+      try {
+        return JSON.parse(
+          cleanedPlanText.slice(firstBraceIndex, lastBraceIndex + 1),
+        );
+      } catch (fallbackError) {
+        throw createHttpError("AI provider returned invalid budget JSON.", 502);
+      }
+    }
+
+    throw createHttpError("AI provider returned invalid budget JSON.", 502);
+  }
+};
+
+const generateBudgetPlanWithDeepSeek = async (payload) => {
   const providerRequest = {
     model: config.model,
     temperature: 0.2,
@@ -928,68 +1383,285 @@ const generateBudgetPlan = async (payload) => {
     ],
   };
 
-  const providerResponse = await postJson(DEEPSEEK_CHAT_COMPLETIONS_URL, providerRequest, {
-    Authorization: `Bearer ${config.apiKey}`,
-  });
+  const providerResponse = await postJson(
+    DEEPSEEK_CHAT_COMPLETIONS_URL,
+    providerRequest,
+    {
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    {
+      serviceName: "AI provider",
+    },
+  );
 
   const rawPlanText = extractChatCompletionText(providerResponse);
-  return normalizePlan(JSON.parse(rawPlanText), payload);
+  return normalizePlan(parseJsonPlanText(rawPlanText), payload);
 };
 
-const requestPhoneVerification = async (normalizedPhone) => {
-  requireTwilioVerify();
+const generateBudgetPlanWithGemini = async (payload) => {
+  const providerRequest = {
+    systemInstruction: {
+      parts: [
+        {
+          text: buildSystemPrompt(),
+        },
+      ],
+    },
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: buildUserPrompt(payload),
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: "application/json",
+    },
+  };
 
-  try {
-    await twilioClient.verify.v2
-      .services(config.twilioVerifyServiceSid)
-      .verifications.create({
-        to: toE164Phone(normalizedPhone),
-        channel: "sms",
-        locale: "ru",
-      });
-  } catch (error) {
-    throw createHttpError(
-      error?.message || "Не удалось отправить одноразовый код.",
-      error?.status || 502,
-    );
-  }
+  const providerResponse = await postJson(
+    buildGeminiGenerateContentUrl(config.model),
+    providerRequest,
+    {
+      "x-goog-api-key": config.apiKey,
+    },
+    {
+      serviceName: "AI provider",
+    },
+  );
+
+  const rawPlanText = extractGeminiContentText(providerResponse);
+  return normalizePlan(parseJsonPlanText(rawPlanText), payload);
 };
 
-const verifyPhoneCode = async (normalizedPhone, code) => {
-  requireTwilioVerify();
-
-  try {
-    const result = await twilioClient.verify.v2
-      .services(config.twilioVerifyServiceSid)
-      .verificationChecks.create({
-        to: toE164Phone(normalizedPhone),
-        code,
-      });
-
-    if (result.status !== "approved") {
-      throw createHttpError("Код не подошел. Попробуйте еще раз.", 400);
-    }
-  } catch (error) {
-    if (error.statusCode) {
-      throw error;
-    }
-
+const generateBudgetPlan = async (payload) => {
+  if (!config.apiKey) {
     throw createHttpError(
-      error?.message || "Не удалось подтвердить одноразовый код.",
-      error?.status || 502,
+      `${config.provider} API key is not configured.`,
+      500,
     );
   }
+
+  if (config.provider === "gemini") {
+    return generateBudgetPlanWithGemini(payload);
+  }
+
+  if (config.provider === "deepseek") {
+    return generateBudgetPlanWithDeepSeek(payload);
+  }
+
+  throw createHttpError(`Unsupported AI provider: ${config.provider}.`, 500);
+};
+
+const generateOtpCode = () =>
+  crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+
+const escapeHtml = (value) =>
+  String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const buildOtpEmailHtml = ({ name, code }) => `
+  <div style="font-family: Arial, sans-serif; color: #222; line-height: 1.5;">
+    <p>Привет, ${escapeHtml(name)}.</p>
+    <p>Код для входа в Budget Planner:</p>
+    <p style="font-size: 28px; letter-spacing: 6px; margin: 20px 0;"><strong>${code}</strong></p>
+    <p>Он действует 10 минут. Если это была не ты, просто проигнорируй это письмо.</p>
+  </div>
+`.trim();
+
+const buildOtpEmailText = ({ name, code }) =>
+  [
+    `Привет, ${name}.`,
+    "",
+    `Код для входа в Budget Planner: ${code}`,
+    "",
+    "Он действует 10 минут. Если это была не ты, просто проигнорируй это письмо.",
+  ].join("\n");
+
+const sendOtpEmail = async ({ email, name, code }) => {
+  requireResendEmail();
+
+  await postJson(
+    RESEND_EMAILS_URL,
+    {
+      from: config.authEmailFrom,
+      to: [email],
+      subject: "Код для входа в Budget Planner",
+      html: buildOtpEmailHtml({ name, code }),
+      text: buildOtpEmailText({ name, code }),
+    },
+    {
+      Authorization: `Bearer ${config.resendApiKey}`,
+      "User-Agent": "budget-planner/1.0",
+    },
+    {
+      serviceName: "Resend",
+    },
+  );
+};
+
+const requestEmailVerification = async ({ name, email }) => {
+  requireDatabase();
+  requireResendEmail();
+
+  await deleteExpiredEmailCodes();
+
+  const cooldownResult = await pool.query(
+    `
+      SELECT created_at
+      FROM auth_email_codes
+      WHERE email = $1
+        AND consumed_at IS NULL
+        AND created_at > NOW() - ($2::int * INTERVAL '1 millisecond')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [email, OTP_RESEND_COOLDOWN_MS],
+  );
+
+  if (cooldownResult.rows[0]) {
+    throw createHttpError(
+      "Код уже отправлен. Попробуйте еще раз через минуту.",
+      429,
+    );
+  }
+
+  await pool.query(
+    `
+      UPDATE auth_email_codes
+      SET consumed_at = NOW()
+      WHERE email = $1
+        AND consumed_at IS NULL
+    `,
+    [email],
+  );
+
+  const code = generateOtpCode();
+  const codeId = `otp_${crypto.randomUUID()}`;
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await pool.query(
+    `
+      INSERT INTO auth_email_codes (id, email, code_hash, expires_at)
+      VALUES ($1, $2, $3, $4)
+    `,
+    [codeId, email, hashOtpCode(email, code), expiresAt],
+  );
+
+  try {
+    await sendOtpEmail({ email, name, code });
+  } catch (error) {
+    await pool.query(
+      `
+        DELETE FROM auth_email_codes
+        WHERE id = $1
+      `,
+      [codeId],
+    );
+
+    throw createHttpError(
+      error?.message || "Не удалось отправить код на почту.",
+      error?.statusCode || error?.status || 502,
+    );
+  }
+
+  return expiresAt;
+};
+
+const verifyEmailCode = async ({ email, code }) => {
+  requireDatabase();
+
+  const verificationResult = await pool.query(
+    `
+      SELECT *
+      FROM auth_email_codes
+      WHERE email = $1
+        AND consumed_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [email],
+  );
+
+  const verification = verificationResult.rows[0];
+
+  if (!verification) {
+    throw createHttpError("Запросите новый код для входа.", 400);
+  }
+
+  if (new Date(verification.expires_at).getTime() <= Date.now()) {
+    await pool.query(
+      `
+        DELETE FROM auth_email_codes
+        WHERE id = $1
+      `,
+      [verification.id],
+    );
+
+    throw createHttpError("Код устарел. Запросите новый код.", 400);
+  }
+
+  if (verification.attempts >= OTP_MAX_ATTEMPTS) {
+    await pool.query(
+      `
+        UPDATE auth_email_codes
+        SET consumed_at = NOW()
+        WHERE id = $1
+      `,
+      [verification.id],
+    );
+
+    throw createHttpError("Слишком много попыток. Запросите новый код.", 429);
+  }
+
+  if (!isHashMatch(verification.code_hash, hashOtpCode(email, code))) {
+    const nextAttempts = verification.attempts + 1;
+
+    await pool.query(
+      `
+        UPDATE auth_email_codes
+        SET
+          attempts = $2,
+          consumed_at = CASE WHEN $2 >= $3 THEN NOW() ELSE consumed_at END
+        WHERE id = $1
+      `,
+      [verification.id, nextAttempts, OTP_MAX_ATTEMPTS],
+    );
+
+    throw createHttpError("Код не подошел. Попробуйте еще раз.", 400);
+  }
+
+  await pool.query(
+    `
+      UPDATE auth_email_codes
+      SET consumed_at = NOW()
+      WHERE id = $1
+    `,
+    [verification.id],
+  );
 };
 
 const handleHealthRequest = async (request, response) => {
   let databaseStatus = "not_configured";
+  let databaseMessage;
 
-  if (pool) {
+  if (config.databaseUrlError) {
+    databaseStatus = "error";
+    databaseMessage = config.databaseUrlError;
+  } else if (pool) {
     try {
       await pool.query("SELECT 1");
       databaseStatus = "ok";
     } catch (error) {
       databaseStatus = "error";
+      databaseMessage = error.message;
     }
   }
 
@@ -1001,7 +1673,21 @@ const handleHealthRequest = async (request, response) => {
       model: config.model,
       hasApiKey: Boolean(config.apiKey),
       databaseStatus,
-      authProvider: twilioClient ? "twilio-verify" : "not_configured",
+      database: {
+        status: databaseStatus,
+        provider: config.databaseProvider,
+        ssl: config.databaseSsl ? "enabled" : "disabled",
+        poolMax: config.databasePoolMax,
+        schemaVersion: DATABASE_SCHEMA_VERSION,
+        message: databaseMessage,
+      },
+      authProvider:
+        config.emailProvider === "resend" &&
+        config.resendApiKey &&
+        config.authEmailFrom
+          ? "resend-email"
+          : "not_configured",
+      emailProvider: config.emailProvider,
     },
     timestamp: new Date().toISOString(),
   });
@@ -1009,16 +1695,16 @@ const handleHealthRequest = async (request, response) => {
 
 const handleAuthRequestCode = async (request, response) => {
   const requestBody = await readJsonBody(request);
-  const { name, normalizedPhone } = validateAuthPayload(requestBody);
+  const { name, email } = validateAuthPayload(requestBody);
 
-  await requestPhoneVerification(normalizedPhone);
+  const expiresAt = await requestEmailVerification({ name, email });
 
   sendJson(request, response, 200, {
     success: true,
     data: {
-      phone: formatPhoneDisplay(normalizedPhone),
+      email,
       name,
-      expiresAt: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+      expiresAt: expiresAt.toISOString(),
     },
     timestamp: new Date().toISOString(),
   });
@@ -1026,14 +1712,14 @@ const handleAuthRequestCode = async (request, response) => {
 
 const handleAuthVerifyCode = async (request, response) => {
   const requestBody = await readJsonBody(request);
-  const { name, normalizedPhone } = validateAuthPayload(requestBody);
+  const { name, email } = validateAuthPayload(requestBody);
   const code = validateOtpCode(requestBody?.code);
 
-  await verifyPhoneCode(normalizedPhone, code);
+  await verifyEmailCode({ email, code });
 
   const userRecord = await findOrCreateUser({
     name,
-    normalizedPhone,
+    email,
   });
   const session = await createSessionForUser(userRecord.id);
 
@@ -1272,6 +1958,8 @@ const initializeDatabaseSchema = async () => {
 
   try {
     await ensureDatabaseSchema();
+    await deleteExpiredSessions();
+    await deleteExpiredEmailCodes();
     console.log("[budget-planner-backend] Database schema is ready.");
   } catch (error) {
     console.error(
@@ -1294,14 +1982,26 @@ const startServer = async () => {
     }
 
     if (!pool) {
+      if (config.databaseUrlError) {
+        console.warn(
+          `[budget-planner-backend] ${config.databaseUrlError} Real user accounts and remote budget sync will be unavailable.`,
+        );
+      } else {
+        console.warn(
+          "[budget-planner-backend] DATABASE_URL is missing. Real user accounts and remote budget sync will be unavailable.",
+        );
+      }
+    }
+
+    if (config.emailProvider !== "resend" || !config.resendApiKey || !config.authEmailFrom) {
       console.warn(
-        "[budget-planner-backend] DATABASE_URL is missing. Real user accounts and remote budget sync will be unavailable.",
+        "[budget-planner-backend] Resend email auth is not configured. Email verification will be unavailable.",
       );
     }
 
-    if (!twilioClient) {
+    if (!config.hasStaticOtpSecret) {
       console.warn(
-        "[budget-planner-backend] Twilio Verify is not configured. SMS verification will be unavailable.",
+        "[budget-planner-backend] AUTH_OTP_SECRET is missing. Pending email codes will reset after server restart.",
       );
     }
 

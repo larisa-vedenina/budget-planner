@@ -16,6 +16,7 @@
 }
 
 .noteItemEditable {
+  padding-left: rem(48);
   box-shadow: var(--budget-card-shadow, var(--shadow-neutral-edit));
 }
 
@@ -39,6 +40,32 @@
   box-sizing: border-box;
   resize: vertical;
   outline: none;
+}
+
+.dragHandle {
+  position: absolute;
+  top: rem(12);
+  left: rem(10);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: rem(24);
+  height: rem(24);
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: grab;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandleIcon {
+  display: block;
+  width: rem(15);
+  height: rem(30);
+  object-fit: contain;
 }
 
 .content {
@@ -72,11 +99,12 @@
 
 .deleteWrap {
   position: absolute;
-  top: rem(8);
+  top: rem(12);
   right: rem(8);
 }
 
 .deleteButton {
+  position: relative;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -88,19 +116,53 @@
   transition: background-color var(--transition-fast);
 }
 
-.deleteButton:hover {
-  background: #ffcccc;
+.deleteIcon {
+  position: absolute;
+  width: rem(15);
+  height: rem(22);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.deleteIcon {
-  color: var(--color-accent-red);
-  font-size: rem(16);
+.deleteIconOpen {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIcon,
+.deleteButton:focus-visible .deleteIcon {
+  transform: scale(1.08);
+}
+
+.deleteButton:hover .deleteIconClosed,
+.deleteButton:focus-visible .deleteIconClosed {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIconOpen,
+.deleteButton:focus-visible .deleteIconOpen {
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
   .noteItem {
-    width: 100%;
+    width: 98%;
     max-width: 100%;
     margin: 0 0 rem(10);
+  }
+
+  .noteItemEditable {
+    padding-left: rem(38);
+  }
+
+  .dragHandle {
+    top: rem(8);
+    left: rem(8);
+  }
+
+  .dragHandleIcon {
+    width: rem(11);
+    height: rem(24);
   }
 }

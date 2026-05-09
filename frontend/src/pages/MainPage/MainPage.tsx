@@ -4,6 +4,7 @@ import { useBudget } from "../../contexts/BudgetContext";
 import { ChecklistItemModel } from "../../types/checklist-item";
 import { NoteModel } from "../../types/note";
 import { CellColor } from "../../types/budget";
+import { createReturnState } from "../../utils/navigationState";
 import Header from "../../components/layout/Header/Header";
 import BudgetGrid from "../../components/layout/BudgetGrid/BudgetGrid";
 import InfoHint from "../../components/ui/InfoHint";
@@ -91,7 +92,9 @@ export const MainPage: React.FC = () => {
           <button
             type="button"
             className={styles.primaryAction}
-            onClick={() => navigate("/form")}
+            onClick={() =>
+              navigate("/form", { state: createReturnState("/main") })
+            }
           >
             Создать новый бюджет
           </button>
@@ -130,6 +133,7 @@ export const MainPage: React.FC = () => {
         className={styles.pageHint}
         ariaLabel="Подсказка по отмене действий"
         variant="gray"
+        iconFileName="tooltip_main.png"
         messages={["Последнее действие в режиме редактирования можно отменить через Ctrl+Z."]}
       />
     </div>

@@ -1,11 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChecklistItemModel } from "../../../types/checklist-item";
 import { Box } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import StarIcon from "@mui/icons-material/Star";
-import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { pxToRem } from "../../../styles/units";
+import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./ChecklistItem.module.scss";
 
 interface DragHandleProps {
@@ -13,6 +10,11 @@ interface DragHandleProps {
   listeners?: Record<string, any>;
   ref?: (element: HTMLButtonElement | null) => void;
 }
+
+const trashIconSrc = publicImageSrc("trash.png");
+const trashOpenIconSrc = publicImageSrc("trash_open.png");
+const starIconSrc = publicImageSrc("star.png");
+const dragIconSrc = publicImageSrc("drag.png");
 
 interface ChecklistItemProps {
   item: ChecklistItemModel;
@@ -166,7 +168,12 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             {...(dragHandleProps.attributes ?? {})}
             {...(dragHandleProps.listeners ?? {})}
           >
-            <DragIndicatorIcon className={styles.dragHandleIcon} />
+            <img
+              src={dragIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={styles.dragHandleIcon}
+            />
           </button>
         )}
 
@@ -180,11 +187,16 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
                 : "Сделать приоритетным"
             }
           >
-            {item.priority === "priority" ? (
-              <StarIcon className={styles.starActive} />
-            ) : (
-              <StarBorderIcon className={styles.starInactive} />
-            )}
+            <img
+              src={starIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.starIcon} ${
+                item.priority === "priority"
+                  ? styles.starActive
+                  : styles.starInactive
+              }`}
+            />
           </div>
         ) : (
           <div
@@ -263,7 +275,18 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             className={styles.deleteButton}
             title="Удалить пункт"
           >
-            <DeleteIcon className={styles.deleteIcon} />
+            <img
+              src={trashIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.deleteIcon} ${styles.deleteIconClosed}`}
+            />
+            <img
+              src={trashOpenIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`${styles.deleteIcon} ${styles.deleteIconOpen}`}
+            />
           </div>
         </Box>
       )}

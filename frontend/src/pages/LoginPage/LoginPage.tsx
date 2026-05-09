@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { createReturnState, getReturnPath } from "../../utils/navigationState";
 import {
   clearPendingOtpRequest,
-  formatPhoneInput,
+  normalizeEmail,
+  isValidEmail,
   isValidName,
   isValidOtpCode,
-  isValidPhone,
   loadPendingOtpRequest,
   savePendingOtpRequest,
 } from "../../utils/otpAuth";
@@ -14,14 +15,14 @@ import styles from "./LoginPage.module.scss";
 
 interface LoginFormErrors {
   name?: string;
-  phone?: string;
+  email?: string;
   code?: string;
   general?: string;
 }
 
 const buildBaseFieldErrors = (
   name: string,
-  phone: string,
+  email: string,
 ): Omit<LoginFormErrors, "code" | "general"> => {
   const nextErrors: Omit<LoginFormErrors, "code" | "general"> = {};
 
@@ -29,8 +30,8 @@ const buildBaseFieldErrors = (
     nextErrors.name = "Укажите имя длиной не меньше 2 символов.";
   }
 
-  if (!isValidPhone(phone)) {
-    nextErrors.phone = "Введите номер телефона полностью.";
+  if (!isValidEmail(email)) {
+    nextErrors.email = "Введите корректную почту.";
   }
 
   return nextErrors;
@@ -38,14 +39,12 @@ const buildBaseFieldErrors = (
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { requestOtp, verifyOtp, isAuthenticated, isAuthLoading } = useAuth();
+  const returnPath = getReturnPath(location.state, "/start");
   const pendingOtpRequest = useMemo(() => loadPendingOtpRequest(), []);
   const [name, setName] = useState(pendingOtpRequest?.name ?? "");
-  const [phone, setPhone] = useState(
-    pendingOtpRequest
-      ? formatPhoneInput(pendingOtpRequest.normalizedPhone)
-      : "",
-  );
+  const [email, setEmail] = useState(pendingOtpRequest?.email ?? "");
   const [code, setCode] = useState("");
   const [isCodeRequested, setIsCodeRequested] = useState(
     Boolean(pendingOtpRequest),
@@ -58,9 +57,12 @@ export const LoginPage = () => {
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
-      navigate("/archive", { replace: true });
+      navigate("/archive", {
+        replace: true,
+        state: createReturnState(returnPath),
+      });
     }
-  }, [isAuthLoading, isAuthenticated, navigate]);
+  }, [isAuthLoading, isAuthenticated, navigate, returnPath]);
 
   const resetOtpStep = () => {
     if (!isCodeRequested) {
@@ -73,7 +75,7 @@ export const LoginPage = () => {
     setStatusMessage("");
     setErrors((currentErrors) => ({
       name: currentErrors.name,
-      phone: currentErrors.phone,
+      email: currentErrors.email,
     }));
   };
 
@@ -87,12 +89,12 @@ export const LoginPage = () => {
     }));
   };
 
-  const handlePhoneChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhoneInput(event.target.value));
+  const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(event.target.value);
     resetOtpStep();
     setErrors((currentErrors) => ({
       ...currentErrors,
-      phone: undefined,
+      email: undefined,
       general: undefined,
     }));
   };
@@ -108,7 +110,7 @@ export const LoginPage = () => {
   };
 
   const handleRequestOtp = async () => {
-    const baseFieldErrors = buildBaseFieldErrors(name, phone);
+    const baseFieldErrors = buildBaseFieldErrors(name, email);
 
     if (Object.keys(baseFieldErrors).length > 0) {
       setErrors(baseFieldErrors);
@@ -119,10 +121,12 @@ export const LoginPage = () => {
     setErrors({});
 
     try {
-      const result = await requestOtp(name, phone);
-      savePendingOtpRequest(name, phone, result.expiresAt);
+      const normalizedEmail = normalizeEmail(email);
+      const result = await requestOtp(name, normalizedEmail);
+      savePendingOtpRequest(name, normalizedEmail, result.expiresAt);
+      setEmail(normalizedEmail);
       setIsCodeRequested(true);
-      setStatusMessage(`Код отправлен на ${result.phone}.`);
+      setStatusMessage(`Код отправлен на ${result.email}.`);
     } catch (error) {
       setErrors({
         general:
@@ -136,11 +140,11 @@ export const LoginPage = () => {
   };
 
   const handleVerifyOtp = async () => {
-    const baseFieldErrors = buildBaseFieldErrors(name, phone);
+    const baseFieldErrors = buildBaseFieldErrors(name, email);
     const nextErrors: LoginFormErrors = { ...baseFieldErrors };
 
     if (!isValidOtpCode(code)) {
-      nextErrors.code = "Введите 6-значный код из SMS.";
+      nextErrors.code = "Введите 6-значный код из письма.";
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -152,8 +156,8 @@ export const LoginPage = () => {
     setErrors({});
 
     try {
-      await verifyOtp(name, phone, code);
-      navigate("/archive");
+      await verifyOtp(name, normalizeEmail(email), code);
+      navigate("/archive", { state: createReturnState(returnPath) });
     } catch (error) {
       setErrors({
         general:
@@ -178,12 +182,17 @@ export const LoginPage = () => {
   return (
     <main className={styles.page}>
       <div className={styles.content}>
-        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className={styles.form}
+          autoComplete="off"
+          noValidate
+        >
           <label className={styles.field}>
             <input
               type="text"
-              name="name"
-              autoComplete="name"
+              name="budgetPlannerName"
+              autoComplete="off"
               placeholder="Имя"
               value={name}
               onChange={handleNameChange}
@@ -198,20 +207,19 @@ export const LoginPage = () => {
 
           <label className={styles.field}>
             <input
-              type="tel"
-              name="phone"
-              autoComplete="tel"
-              inputMode="numeric"
-              maxLength={18}
-              placeholder="+7 (___) ___-__-__"
-              value={phone}
-              onChange={handlePhoneChange}
-              className={`${styles.input} ${styles.phoneInput} ${
-                errors.phone ? styles.inputError : ""
+              type="text"
+              name="budgetPlannerEmail"
+              autoComplete="off"
+              inputMode="email"
+              placeholder="Почта"
+              value={email}
+              onChange={handleEmailChange}
+              className={`${styles.input} ${styles.emailInput} ${
+                errors.email ? styles.inputError : ""
               }`}
             />
-            {errors.phone && (
-              <span className={styles.errorText}>{errors.phone}</span>
+            {errors.email && (
+              <span className={styles.errorText}>{errors.email}</span>
             )}
           </label>
 
@@ -219,8 +227,8 @@ export const LoginPage = () => {
             <label className={styles.field}>
               <input
                 type="text"
-                name="otp"
-                autoComplete="one-time-code"
+                name="budgetPlannerCode"
+                autoComplete="off"
                 inputMode="numeric"
                 maxLength={6}
                 placeholder="Одноразовый код"
@@ -267,7 +275,7 @@ export const LoginPage = () => {
           <button
             type="button"
             className={styles.backButton}
-            onClick={() => navigate("/start")}
+            onClick={() => navigate(returnPath)}
           >
             Вернуться
           </button>

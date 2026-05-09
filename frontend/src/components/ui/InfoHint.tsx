@@ -1,11 +1,12 @@
 import React from "react";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { publicImageSrc } from "../../utils/publicImageSrc";
 import styles from "./InfoHint.module.scss";
 
 interface InfoHintProps {
   messages: string[];
   ariaLabel: string;
-  variant?: "blue" | "red" | "gray";
+  variant?: "blue" | "green" | "red" | "gray";
+  iconFileName?: string;
   autoVisible?: boolean;
   floating?: boolean;
   className?: string;
@@ -14,10 +15,13 @@ const InfoHint: React.FC<InfoHintProps> = ({
   messages,
   ariaLabel,
   variant = "blue",
+  iconFileName = "tooltip_main.png",
   autoVisible = false,
   floating = true,
   className = "",
 }) => {
+  const iconSrc = publicImageSrc(iconFileName);
+
   return (
     <div
       className={`${styles.wrap} ${styles[`variant${variant[0].toUpperCase()}${variant.slice(1)}`]} ${
@@ -25,7 +29,7 @@ const InfoHint: React.FC<InfoHintProps> = ({
       } ${className}`}
     >
       <button type="button" className={styles.button} aria-label={ariaLabel}>
-        <InfoOutlinedIcon className={styles.icon} />
+        <img src={iconSrc} alt="" aria-hidden="true" className={styles.icon} />
       </button>
 
       <div

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { Box, IconButton, Popover, Typography } from "@mui/material";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import { DateCalendar, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { PickerDay, PickerDayProps } from "@mui/x-date-pickers/PickerDay";
@@ -12,6 +11,7 @@ import {
   parseISO,
 } from "date-fns";
 import { ru } from "date-fns/locale";
+import { publicImageSrc } from "../../utils/publicImageSrc";
 import styles from "./DateRangePicker.module.scss";
 
 interface DateRangePickerProps {
@@ -27,6 +27,11 @@ interface RangePickerDayProps extends PickerDayProps {
   previewStart?: Date | null;
   previewEnd?: Date | null;
 }
+
+const calendarIconSrc = publicImageSrc("calendar.png");
+const RANGE_SEPARATOR = " – ";
+
+// Пропускаем только валидные даты, чтобы диапазон не ломался на пустых значениях.
 const isValidDate = (value: Date | null | undefined): value is Date =>
   Boolean(value && !Number.isNaN(value.getTime()));
 
@@ -34,6 +39,8 @@ const formatStorageDate = (value: Date): string => format(value, "yyyy-MM-dd");
 
 const formatDisplayDate = (value: Date, includeYear = true): string =>
   format(value, includeYear ? "d MMMM yyyy" : "d MMMM", { locale: ru });
+
+// Всегда храним диапазон в прямом порядке: от ранней даты к поздней.
 const normalizeRange = (start: Date, end: Date) =>
   isAfter(start, end)
     ? { start: end, end: start }
@@ -41,6 +48,8 @@ const normalizeRange = (start: Date, end: Date) =>
         start,
         end,
       };
+
+// Кастомный день нужен, чтобы подсвечивать весь выбранный диапазон.
 const RangePickerDay: React.FC<RangePickerDayProps> = ({
   day,
   outsideCurrentMonth,
@@ -160,13 +169,19 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             end: selectedStartDate,
           }
         : null;
+
+  // Сохраняем якорь, чтобы поповер открывался точно от иконки календаря.
   const handleOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
+
+  // При закрытии сбрасываем только hover-предпросмотр диапазона.
   const handleClose = () => {
     setAnchorEl(null);
     setHoveredDay(null);
   };
+
+  // Первый клик задает старт периода, второй завершает диапазон.
   const handleChange = (newValue: Date | null) => {
     if (!isValidDate(newValue)) {
       return;
@@ -190,13 +205,15 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       setHoveredDay(day);
     }
   };
+
+  // Если год один и тот же, не дублируем его в обеих датах.
   const selectedLabel =
     isValidDate(selectedStartDate) && isValidDate(selectedEndDate)
       ? selectedStartDate.getFullYear() === selectedEndDate.getFullYear()
-        ? `${formatDisplayDate(selectedStartDate, false)} - ${formatDisplayDate(selectedEndDate, false)}`
-        : `${formatDisplayDate(selectedStartDate)} - ${formatDisplayDate(selectedEndDate)}`
+        ? `${formatDisplayDate(selectedStartDate, false)}${RANGE_SEPARATOR}${formatDisplayDate(selectedEndDate, false)}`
+        : `${formatDisplayDate(selectedStartDate)}${RANGE_SEPARATOR}${formatDisplayDate(selectedEndDate)}`
       : isValidDate(selectedStartDate)
-        ? `${formatDisplayDate(selectedStartDate, false)} - ...`
+        ? `${formatDisplayDate(selectedStartDate, false)}${RANGE_SEPARATOR}...`
         : "Выбери период планирования";
 
   const calendarValue = selectedEndDate ?? selectedStartDate ?? new Date();
@@ -221,7 +238,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             disableRipple
             aria-label="Открыть календарь"
           >
-            <CalendarMonthOutlinedIcon />
+            <img
+              src={calendarIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={styles.calendarIcon}
+            />
           </IconButton>
         </Box>
 

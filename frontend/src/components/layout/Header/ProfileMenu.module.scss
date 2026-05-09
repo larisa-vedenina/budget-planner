@@ -40,7 +40,8 @@
   min-width: rem(52);
   overflow: hidden;
   border-radius: 50%;
-  border-color: var(--color-accent-blue);
+  border: rem(2) solid var(--border-neutral);
+  box-shadow: var(--shadow-neutral-edit);
 }
 
 .loginButton {
@@ -103,10 +104,12 @@
   text-transform: uppercase;
 }
 
-.profilePhone {
+.profileEmail {
   font-size: rem(16);
   font-weight: 400;
   color: var(--color-text-secondary);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .menuActions {

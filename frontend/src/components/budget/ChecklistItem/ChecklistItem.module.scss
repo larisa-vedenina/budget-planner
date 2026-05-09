@@ -84,7 +84,6 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
   cursor: grab;
 }
 
@@ -93,7 +92,10 @@
 }
 
 .dragHandleIcon {
-  font-size: rem(22);
+  display: block;
+  width: rem(17);
+  height: rem(32);
+  object-fit: contain;
 }
 
 .iconButton {
@@ -104,14 +106,28 @@
   justify-content: center;
 }
 
+.starIcon {
+  display: block;
+  width: rem(28);
+  height: rem(28);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
 .starActive {
-  color: var(--priority-border-color, var(--color-accent-red));
-  font-size: rem(28);
+  opacity: 1;
 }
 
 .starInactive {
-  color: var(--color-border);
-  font-size: rem(28);
+  opacity: 0.65;
+  filter: grayscale(1);
+}
+
+.iconButton:hover .starIcon,
+.iconButton:focus-visible .starIcon {
+  transform: scale(1.08);
 }
 
 .checkbox {
@@ -268,26 +284,48 @@
 }
 
 .deleteButton {
+  position: relative;
   cursor: pointer;
   padding: rem(4);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: rem(32);
+  height: rem(32);
 }
 
 .deleteIcon {
-  color: var(--color-accent-red);
-  font-size: rem(28);
-  transition: transform var(--transition-fast);
+  position: absolute;
+  width: rem(24);
+  height: rem(28);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.deleteButton:hover .deleteIcon {
+.deleteIconOpen {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIcon,
+.deleteButton:focus-visible .deleteIcon {
   transform: scale(1.08);
+}
+
+.deleteButton:hover .deleteIconClosed,
+.deleteButton:focus-visible .deleteIconClosed {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIconOpen,
+.deleteButton:focus-visible .deleteIconOpen {
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
   .item {
-    width: 100%;
+    width: 98%;
     max-width: 100%;
     flex-wrap: nowrap;
     align-items: center;
@@ -307,7 +345,7 @@
   }
 
   .leftEditing {
-    gap: rem(4);
+    gap: rem(1);
     min-width: rem(48);
     margin-right: 0;
   }
@@ -379,5 +417,20 @@
     right: rem(6);
     transform: translateY(-50%);
     margin-left: 0;
+  }
+
+  .deleteIcon {
+    width: rem(22);
+    height: rem(22);
+  }
+
+  .starIcon {
+    width: rem(22);
+    height: rem(22);
+  }
+
+  .dragHandleIcon {
+    width: rem(13);
+    height: rem(28);
   }
 }

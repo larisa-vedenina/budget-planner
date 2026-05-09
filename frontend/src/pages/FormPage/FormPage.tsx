@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Box, Button, Container, TextField } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -27,7 +27,10 @@ import {
 import { pxToRem, remSpace } from "../../styles/units";
 import { getSurfaceShadowVariable } from "../../styles/theme";
 import { NoteModel } from "../../types/note";
+import { getReturnPath } from "../../utils/navigationState";
 import styles from "./FormPage.module.scss";
+
+// Стили кнопок допсекций собраны в helper, чтобы не дублировать press-эффект.
 const getAdditionalButtonSx = (sectionColor: string) => ({
   border: `${pxToRem(3)} solid ${sectionColor}`,
   borderRadius: pxToRem(10),
@@ -56,6 +59,8 @@ const getAdditionalButtonSx = (sectionColor: string) => ({
   letterSpacing: "0",
   textTransform: "uppercase",
 });
+
+// Поле комментария живет отдельно от секций, поэтому держим его стили рядом со страницей.
 const aiCommentSx = {
   "& .MuiOutlinedInput-root": {
     backgroundColor: "#FFFFFF",
@@ -91,8 +96,12 @@ const aiCommentSx = {
 
 const FormPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { loadBudget } = useBudget();
   const initialDraft = useMemo(loadFormDraft, []);
+  const returnPath = getReturnPath(location.state, "/start");
+
+  // История формы нужна для Ctrl+Z и переживает перезагрузку страницы.
   const [formData, setFormData] = useState<FormData>(initialDraft.formData);
   const [history, setHistory] = useState<FormData[]>(initialDraft.history);
   const [historyIndex, setHistoryIndex] = useState(initialDraft.historyIndex);
@@ -105,6 +114,8 @@ const FormPage: React.FC = () => {
       ),
     [formData.sections],
   );
+
+  // Сохраняем новый снимок формы и обрезаем redo-ветку.
   const addToHistory = useCallback(
     (newFormData: FormData, action: string) => {
       const newHistory = [...history.slice(0, historyIndex + 1), newFormData];
@@ -113,6 +124,8 @@ const FormPage: React.FC = () => {
     },
     [history, historyIndex],
   );
+
+  // Единая точка изменения формы убирает дублирование в обработчиках.
   const applyFormChange = useCallback(
     (action: string, nextFormData: FormData) => {
       setFormData(nextFormData);
@@ -120,6 +133,8 @@ const FormPage: React.FC = () => {
     },
     [addToHistory],
   );
+
+  // Возвращаем предыдущий снимок формы.
   const undo = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
@@ -127,6 +142,8 @@ const FormPage: React.FC = () => {
       setFormData(history[newIndex]);
     }
   }, [history, historyIndex]);
+
+  // Возвращаем отмененное изменение.
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
@@ -134,14 +151,16 @@ const FormPage: React.FC = () => {
       setFormData(history[newIndex]);
     }
   }, [history, historyIndex]);
+
+  // Поддерживаем привычный undo/redo прямо в форме.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
         if (e.shiftKey) {
-          redo();
+          redo(); // Ctrl+Shift+Z для redo
         } else {
-          undo();
+          undo(); // Ctrl+Z для undo
         }
       }
     };
@@ -149,6 +168,8 @@ const FormPage: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
+
+  // Автосохраняем черновик и историю формы между перезагрузками.
   useEffect(() => {
     saveFormDraft({
       formData,
@@ -201,6 +222,10 @@ const FormPage: React.FC = () => {
     [formData, applyFormChange],
   );
 
+  const handleBack = useCallback(() => {
+    navigate(returnPath);
+  }, [navigate, returnPath]);
+
   const handleAddSection = useCallback(
     (sectionType: SectionType) => {
       if (formData.sections[sectionType]) {
@@ -238,6 +263,8 @@ const FormPage: React.FC = () => {
     },
     [formData, applyFormChange],
   );
+
+  // После создания бюджета черновик больше не нужен.
   const handleCreateBudget = useCallback(async () => {
     if (isSubmitting) {
       return;
@@ -293,7 +320,7 @@ const FormPage: React.FC = () => {
           paddingX: { xs: 0, sm: 0 },
         }}
       >
-
+        {/* Основные секции формы всегда видны пользователю. */}
         {MAIN_FORM_SECTIONS.map((sectionId) => {
           const section = formData.sections[sectionId];
 
@@ -319,7 +346,7 @@ const FormPage: React.FC = () => {
           );
         })}
 
-
+        {/* Дополнительные секции подключаются по кнопке. */}
         <Box className={styles.sectionBlock} sx={{ marginBottom: pxToRem(10) }}>
           <Box className={styles.additionalActions}>
             {ADDITIONAL_FORM_SECTIONS.map((sectionType) => {
@@ -346,7 +373,7 @@ const FormPage: React.FC = () => {
             })}
           </Box>
 
-
+          {/* Рендерим только реально подключенные дополнительные секции. */}
           {additionalSections.map((sectionType) => {
             const section = formData.sections[sectionType];
 
@@ -369,7 +396,7 @@ const FormPage: React.FC = () => {
           })}
         </Box>
 
-
+        {/* Свободный комментарий помогает дополнить план контекстом. */}
         <Box className={styles.aiSection} sx={{ marginBottom: pxToRem(10) }}>
           <TextField
             fullWidth
@@ -389,7 +416,7 @@ const FormPage: React.FC = () => {
           />
         </Box>
 
-
+        {/* Кнопка создания бюджета */}
         <Box className={styles.createRow}>
           <Button
             disableRipple
@@ -433,7 +460,7 @@ const FormPage: React.FC = () => {
               },
             }}
           >
-            {isSubmitting ? "Создаем AI-план..." : "Создать план бюджета"}
+            {isSubmitting ? "AI создает план..." : "Создать план бюджета"}
           </Button>
         </Box>
 
@@ -444,7 +471,7 @@ const FormPage: React.FC = () => {
           <button
             type="button"
             className={styles.backButton}
-            onClick={() => navigate("/start")}
+            onClick={handleBack}
           >
             Вернуться
           </button>
@@ -453,6 +480,7 @@ const FormPage: React.FC = () => {
         <InfoHint
           ariaLabel="Подсказки по заполнению формы"
           variant="red"
+          iconFileName="tooltip_form.png"
           floating={false}
           messages={[
             "Последнее изменение можно отменить через Ctrl+Z.",

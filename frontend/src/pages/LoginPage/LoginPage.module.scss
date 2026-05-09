@@ -6,9 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: rem(16);
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.75), transparent 35%),
-    var(--page-background-login);
+  background: var(--page-background-login);
 }
 
 .content {
@@ -45,7 +43,17 @@
 
 .input::placeholder {
   color: rgba(13, 13, 13, 0.5);
+}
 
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  box-shadow: 0 0 0 rem(1000) var(--surface-white) inset;
+  -webkit-box-shadow: 0 0 0 rem(1000) var(--surface-white) inset;
+  -webkit-text-fill-color: var(--color-text-primary);
+  caret-color: var(--color-text-primary);
+  transition: background-color 9999s ease-out;
 }
 
 .nameInput {
@@ -57,12 +65,12 @@
   border-color: var(--surface-blue);
 }
 
-.phoneInput {
+.emailInput {
   border-color: var(--surface-green);
   box-shadow: var(--shadow-accent-green);
 }
 
-.phoneInput:focus {
+.emailInput:focus {
   border-color: var(--surface-green);
 }
 

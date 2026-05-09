@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BudgetPeriod } from "../../types/budget";
 import { useBudget } from "../../contexts/BudgetContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -11,8 +10,15 @@ import {
   loadBudgetHistory,
   upsertBudgetHistory,
 } from "../../utils/budgetStorage";
+import { publicImageSrc } from "../../utils/publicImageSrc";
+import { createReturnState, getReturnPath } from "../../utils/navigationState";
 import { saveRemoteBudgetSnapshot } from "../../services/budgetSyncService";
 import styles from "./ArchivePage.module.scss";
+
+const trashArchiveIconSrc = publicImageSrc("trash_archive.png");
+const trashArchiveOpenIconSrc = publicImageSrc("trash_archive_open.png");
+
+// Получаем дату в формате "1 ноября" с правильным падежом месяца.
 const formatDayAndMonth = (date: Date): string =>
   date.toLocaleDateString("ru-RU", {
     day: "numeric",
@@ -28,7 +34,7 @@ const formatArchiveRange = (budget: BudgetPeriod): string => {
     const endDayAndMonth = formatDayAndMonth(budget.endDate);
     const monthLabel = endDayAndMonth.replace(/^\d+\s+/u, "");
 
-    return `${budget.startDate.getDate()}-${budget.endDate.getDate()} ${monthLabel}`;
+    return `${budget.startDate.getDate()} - ${budget.endDate.getDate()} ${monthLabel}`;
   }
 
   return `${formatDayAndMonth(budget.startDate)} - ${formatDayAndMonth(budget.endDate)}`;
@@ -56,8 +62,10 @@ const ARCHIVE_CARD_STYLES = [
 
 export const ArchivePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentBudget, loadBudget } = useBudget();
   const { isAuthenticated } = useAuth();
+  const returnPath = getReturnPath(location.state, "/start");
   const [budgets, setBudgets] = useState<BudgetPeriod[]>([]);
   const [deletedBudgets, setDeletedBudgets] = useState<DeletedBudgetEntry[]>([]);
   const [isUndoInfoAutoVisible, setIsUndoInfoAutoVisible] = useState(false);
@@ -138,6 +146,10 @@ export const ArchivePage = () => {
     }
   }, [deletedBudgets, isAuthenticated, loadBudget]);
 
+  const handleBack = useCallback(() => {
+    navigate(returnPath);
+  }, [navigate, returnPath]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") {
@@ -204,7 +216,18 @@ export const ArchivePage = () => {
                 aria-label={`Удалить бюджет ${formatArchiveRange(budget)}`}
                 title="Удалить бюджет"
               >
-                <DeleteOutlineIcon className={styles.deleteIcon} />
+                <img
+                  src={trashArchiveIconSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className={`${styles.deleteIcon} ${styles.deleteIconClosed}`}
+                />
+                <img
+                  src={trashArchiveOpenIconSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className={`${styles.deleteIcon} ${styles.deleteIconOpen}`}
+                />
               </button>
             </div>
           );
@@ -214,7 +237,9 @@ export const ArchivePage = () => {
           <button
             type="button"
             className={styles.createButton}
-            onClick={() => navigate("/form")}
+            onClick={() =>
+              navigate("/form", { state: createReturnState("/archive") })
+            }
           >
             Создать новый
           </button>
@@ -226,7 +251,7 @@ export const ArchivePage = () => {
           <button
             type="button"
             className={styles.backButton}
-            onClick={() => navigate("/start")}
+            onClick={handleBack}
           >
             Вернуться
           </button>
@@ -234,6 +259,8 @@ export const ArchivePage = () => {
 
         <InfoHint
           ariaLabel="Информация об отмене удаления"
+          variant="green"
+          iconFileName="tooltip_archive.png"
           messages={["Отменить удаление можно сочетанием Ctrl+Z."]}
           autoVisible={isUndoInfoAutoVisible}
           floating={false}

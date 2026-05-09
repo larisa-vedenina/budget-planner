@@ -47,7 +47,7 @@ const pageBackgrounds = {
   main: surfaceColors.white,
   login: accentColors.yellow.soft,
   form: accentColors.red.soft,
-  archive: accentColors.blue.soft,
+  archive: accentColors.green.soft,
 } as const;
 
 const textColors = {

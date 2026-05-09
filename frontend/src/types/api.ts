@@ -100,7 +100,7 @@ export interface AuthUserResponse {
 }
 
 export interface RequestOtpResponse {
-  phone: string;
+  email: string;
   name: string;
   expiresAt: string;
 }

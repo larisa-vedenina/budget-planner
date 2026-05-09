@@ -18,8 +18,8 @@ import {
 
 interface AuthContextType {
   user: User | null;
-  requestOtp: (name: string, phone: string) => Promise<{ phone: string; expiresAt: Date }>;
-  verifyOtp: (name: string, phone: string, code: string) => Promise<void>;
+  requestOtp: (name: string, email: string) => Promise<{ email: string; expiresAt: Date }>;
+  verifyOtp: (name: string, email: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   updateAvatar: (avatarUrl: string) => Promise<void>;
   isAuthenticated: boolean;
@@ -112,15 +112,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
   }, [user]);
 
-  const requestOtp = async (name: string, phone: string) =>
-    requestOtpCode(name, phone);
+  const requestOtp = async (name: string, email: string) =>
+    requestOtpCode(name, email);
 
   const verifyOtp = async (
     name: string,
-    phone: string,
+    email: string,
     code: string,
   ) => {
-    const nextUser = await verifyOtpCode(name, phone, code);
+    const nextUser = await verifyOtpCode(name, email, code);
     clearPendingOtpRequest();
     setUser(nextUser);
   };

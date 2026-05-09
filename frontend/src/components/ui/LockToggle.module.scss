@@ -21,10 +21,16 @@
   transition: transform 0.3s ease;
 }
 
-.buttonUnlocked .iconWrap {
-  transform: rotate(180deg);
+.icon {
+  display: block;
+  width: var(--lock-icon-size);
+  height: var(--lock-icon-size);
+  object-fit: contain;
 }
 
-.icon {
-  color: var(--lock-color);
-}
+// @media (max-width: 780px) {
+//   .icon {
+//     width: rem(30);
+//     height: rem(30);
+//   }
+// }

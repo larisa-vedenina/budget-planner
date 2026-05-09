@@ -3,34 +3,20 @@ const DEFAULT_OTP_TTL_MS = 10 * 60 * 1000;
 
 export interface PendingOtpRequest {
   name: string;
-  normalizedPhone: string;
+  email: string;
   requestedAt: Date;
   expiresAt: Date;
 }
 
 interface StoredPendingOtpRequest {
   name: string;
-  normalizedPhone: string;
+  email: string;
   requestedAt: string;
   expiresAt: string;
 }
 
-const getDigits = (value: string): string => value.replace(/\D/g, "");
-
-const toRussianPhoneDigits = (digits: string): string => {
-  if (
-    digits.length === 11 &&
-    (digits.startsWith("7") || digits.startsWith("8"))
-  ) {
-    return `7${digits.slice(1)}`;
-  }
-
-  if (digits.length === 10) {
-    return `7${digits}`;
-  }
-
-  return digits.slice(0, 11);
-};
+export const normalizeEmail = (value: string): string =>
+  value.trim().toLowerCase();
 
 const toPendingOtpRequest = (
   rawValue: string | null,
@@ -43,12 +29,15 @@ const toPendingOtpRequest = (
     const parsedValue = JSON.parse(rawValue) as StoredPendingOtpRequest;
     const pendingRequest: PendingOtpRequest = {
       name: parsedValue.name,
-      normalizedPhone: parsedValue.normalizedPhone,
+      email: normalizeEmail(parsedValue.email || ""),
       requestedAt: new Date(parsedValue.requestedAt),
       expiresAt: new Date(parsedValue.expiresAt),
     };
 
-    if (pendingRequest.expiresAt.getTime() <= Date.now()) {
+    if (
+      !isValidEmail(pendingRequest.email) ||
+      pendingRequest.expiresAt.getTime() <= Date.now()
+    ) {
       window.localStorage.removeItem(OTP_REQUEST_STORAGE_KEY);
       return null;
     }
@@ -61,67 +50,10 @@ const toPendingOtpRequest = (
   }
 };
 
-export const formatPhoneInput = (value: string): string => {
-  const digits = getDigits(value);
-  const nationalDigits =
-    digits.startsWith("7") || digits.startsWith("8")
-      ? digits.slice(1, 11)
-      : digits.slice(0, 10);
-
-  const area = nationalDigits.slice(0, 3);
-  const prefix = nationalDigits.slice(3, 6);
-  const linePartOne = nationalDigits.slice(6, 8);
-  const linePartTwo = nationalDigits.slice(8, 10);
-
-  let formatted = "+7";
-
-  if (area) {
-    formatted += ` (${area}`;
-  }
-
-  if (area.length === 3) {
-    formatted += ")";
-  }
-
-  if (prefix) {
-    formatted += ` ${prefix}`;
-  }
-
-  if (linePartOne) {
-    formatted += `-${linePartOne}`;
-  }
-
-  if (linePartTwo) {
-    formatted += `-${linePartTwo}`;
-  }
-
-  return formatted;
-};
-
-export const normalizePhone = (value: string): string =>
-  toRussianPhoneDigits(getDigits(value));
-
-export const formatPhoneDisplay = (value: string): string => {
-  const normalizedPhone = normalizePhone(value);
-
-  if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith("7")) {
-    return value;
-  }
-
-  const nationalDigits = normalizedPhone.slice(1);
-
-  return `+7 (${nationalDigits.slice(0, 3)}) ${nationalDigits.slice(
-    3,
-    6,
-  )}-${nationalDigits.slice(6, 8)}-${nationalDigits.slice(8, 10)}`;
-};
-
 export const isValidName = (value: string): boolean => value.trim().length >= 2;
 
-export const isValidPhone = (value: string): boolean => {
-  const normalizedPhone = normalizePhone(value);
-  return normalizedPhone.length === 11 && normalizedPhone.startsWith("7");
-};
+export const isValidEmail = (value: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
 
 export const isValidOtpCode = (value: string): boolean => /^\d{6}$/.test(value);
 
@@ -137,17 +69,17 @@ export const loadPendingOtpRequest = (): PendingOtpRequest | null => {
 
 export const savePendingOtpRequest = (
   name: string,
-  phone: string,
+  email: string,
   expiresAt?: Date,
 ): PendingOtpRequest => {
-  const normalizedPhone = normalizePhone(phone);
+  const normalizedEmail = normalizeEmail(email);
   const requestedAt = new Date();
   const safeExpiresAt =
     expiresAt ?? new Date(requestedAt.getTime() + DEFAULT_OTP_TTL_MS);
 
   const pendingRequest: PendingOtpRequest = {
     name: name.trim(),
-    normalizedPhone,
+    email: normalizedEmail,
     requestedAt,
     expiresAt: safeExpiresAt,
   };
@@ -155,7 +87,7 @@ export const savePendingOtpRequest = (
   if (typeof window !== "undefined") {
     const payload: StoredPendingOtpRequest = {
       name: pendingRequest.name,
-      normalizedPhone: pendingRequest.normalizedPhone,
+      email: pendingRequest.email,
       requestedAt: pendingRequest.requestedAt.toISOString(),
       expiresAt: pendingRequest.expiresAt.toISOString(),
     };

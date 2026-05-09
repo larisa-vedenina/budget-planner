@@ -153,7 +153,7 @@
 .actionsBlock {
   display: flex;
   align-items: center;
-  gap: rem(12);
+  gap: rem(20);
   justify-content: flex-end;
   min-width: rem(180);
   justify-self: end;
@@ -175,7 +175,7 @@
       "budget actions";
     align-items: start;
     column-gap: rem(10);
-    row-gap: rem(10);
+    row-gap: rem(30);
     padding: calc(env(safe-area-inset-top, 0px) + #{rem(72)}) rem(20) rem(24);
   }
 
@@ -209,7 +209,7 @@
     align-items: flex-start;
     align-self: start;
     justify-self: end;
-    gap: rem(6);
+    gap: rem(12);
   }
 
   .budgetLine {

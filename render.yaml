@@ -1,7 +1,3 @@
-databases:
-  - name: budget-planner-db
-    plan: free
-
 services:
   - type: web
     name: budget-planner
@@ -15,22 +11,28 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: LLM_PROVIDER
-        value: deepseek
-      - key: DEEPSEEK_MODEL
-        value: deepseek-chat
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: ALLOWED_ORIGIN
         value: "*"
       - key: DATABASE_URL
-        fromDatabase:
-          name: budget-planner-db
-          property: connectionString
+        sync: false
       - key: DATABASE_SSL
         value: "true"
-      - key: DEEPSEEK_API_KEY
+      - key: DATABASE_POOL_MAX
+        value: "5"
+      - key: DATABASE_CONNECTION_TIMEOUT_MS
+        value: "10000"
+      - key: DATABASE_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: GEMINI_API_KEY
         sync: false
-      - key: TWILIO_ACCOUNT_SID
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: AUTH_EMAIL_FROM
+        value: "Budget Planner <login@mail.ai-budget.ru>"
+      - key: RESEND_API_KEY
         sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_VERIFY_SERVICE_SID
+      - key: AUTH_OTP_SECRET
         sync: false
