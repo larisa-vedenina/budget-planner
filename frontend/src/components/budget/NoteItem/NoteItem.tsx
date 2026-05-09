@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { NoteModel } from "../../../types/note";
 import { Box } from "@mui/material";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./NoteItem.module.scss";
 
@@ -13,6 +12,7 @@ interface DragHandleProps {
 
 const trashIconSrc = publicImageSrc("trash.png");
 const trashOpenIconSrc = publicImageSrc("trash_open.png");
+const dragIconSrc = publicImageSrc("drag.png");
 
 interface NoteItemProps {
   note: NoteModel;
@@ -96,7 +96,12 @@ export const NoteItem: React.FC<NoteItemProps> = ({
           {...(dragHandleProps.attributes ?? {})}
           {...(dragHandleProps.listeners ?? {})}
         >
-          <DragIndicatorIcon className={styles.dragHandleIcon} />
+          <img
+            src={dragIconSrc}
+            alt=""
+            aria-hidden="true"
+            className={styles.dragHandleIcon}
+          />
         </button>
       )}
 

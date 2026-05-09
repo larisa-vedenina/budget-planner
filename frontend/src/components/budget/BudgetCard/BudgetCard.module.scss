@@ -174,7 +174,7 @@
 .activeItemsWrap {
   flex: 0 0 auto;
   overflow: hidden;
-  padding: 0 rem(8) rem(4) 0;
+  padding: 0 0 rem(4) 0;
 }
 
 .activeItemsWrap > *:last-child :global(.checklist-item) {

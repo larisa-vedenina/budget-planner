@@ -44,7 +44,7 @@
 
 .dragHandle {
   position: absolute;
-  top: rem(10);
+  top: rem(12);
   left: rem(10);
   display: inline-flex;
   align-items: center;
@@ -54,7 +54,6 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
   cursor: grab;
 }
 
@@ -63,7 +62,10 @@
 }
 
 .dragHandleIcon {
-  font-size: rem(22);
+  display: block;
+  width: rem(15);
+  height: rem(30);
+  object-fit: contain;
 }
 
 .content {
@@ -97,7 +99,7 @@
 
 .deleteWrap {
   position: absolute;
-  top: rem(8);
+  top: rem(12);
   right: rem(8);
 }
 
@@ -160,6 +162,7 @@
   }
 
   .dragHandleIcon {
-    font-size: rem(20);
+    width: rem(11);
+    height: rem(24);
   }
 }

@@ -84,7 +84,6 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
   cursor: grab;
 }
 
@@ -93,7 +92,10 @@
 }
 
 .dragHandleIcon {
-  font-size: rem(22);
+  display: block;
+  width: rem(17);
+  height: rem(32);
+  object-fit: contain;
 }
 
 .iconButton {
@@ -104,14 +106,28 @@
   justify-content: center;
 }
 
+.starIcon {
+  display: block;
+  width: rem(28);
+  height: rem(28);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
 .starActive {
-  color: var(--priority-border-color, var(--color-accent-red));
-  font-size: rem(28);
+  opacity: 1;
 }
 
 .starInactive {
-  color: var(--color-border);
-  font-size: rem(28);
+  opacity: 0.65;
+  filter: grayscale(1);
+}
+
+.iconButton:hover .starIcon,
+.iconButton:focus-visible .starIcon {
+  transform: scale(1.08);
 }
 
 .checkbox {
@@ -329,7 +345,7 @@
   }
 
   .leftEditing {
-    gap: rem(4);
+    gap: rem(1);
     min-width: rem(48);
     margin-right: 0;
   }
@@ -401,5 +417,20 @@
     right: rem(6);
     transform: translateY(-50%);
     margin-left: 0;
+  }
+
+  .deleteIcon {
+    width: rem(22);
+    height: rem(22);
+  }
+
+  .starIcon {
+    width: rem(22);
+    height: rem(22);
+  }
+
+  .dragHandleIcon {
+    width: rem(13);
+    height: rem(28);
   }
 }

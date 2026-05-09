@@ -34,15 +34,14 @@
 }
 
 .button {
-  width: rem(36);
+  width: rem(44);
   height: rem(36);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--hint-shadow);
-  color: var(--color-text-secondary);
+  // border-radius: rem(10);
+  // background: rgba(255, 255, 255, 0.92);
+  // box-shadow: var(--hint-shadow);
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -53,12 +52,13 @@
 .button:focus-visible,
 .button:active {
   transform: translate(rem(3), rem(2));
-  box-shadow: none;
-  background: var(--color-white);
 }
 
 .icon {
-  font-size: rem(20);
+  display: block;
+  width: rem(50);
+  height: rem(30);
+  object-fit: contain;
 }
 
 .tooltip {

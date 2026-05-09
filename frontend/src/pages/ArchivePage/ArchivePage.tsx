@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { BudgetPeriod } from "../../types/budget";
 import { useBudget } from "../../contexts/BudgetContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -11,8 +10,12 @@ import {
   loadBudgetHistory,
   upsertBudgetHistory,
 } from "../../utils/budgetStorage";
+import { publicImageSrc } from "../../utils/publicImageSrc";
 import { saveRemoteBudgetSnapshot } from "../../services/budgetSyncService";
 import styles from "./ArchivePage.module.scss";
+
+const trashArchiveIconSrc = publicImageSrc("trash_archive.png");
+const trashArchiveOpenIconSrc = publicImageSrc("trash_archive_open.png");
 
 // Получаем дату в формате "1 ноября" с правильным падежом месяца.
 const formatDayAndMonth = (date: Date): string =>
@@ -30,7 +33,7 @@ const formatArchiveRange = (budget: BudgetPeriod): string => {
     const endDayAndMonth = formatDayAndMonth(budget.endDate);
     const monthLabel = endDayAndMonth.replace(/^\d+\s+/u, "");
 
-    return `${budget.startDate.getDate()}-${budget.endDate.getDate()} ${monthLabel}`;
+    return `${budget.startDate.getDate()} - ${budget.endDate.getDate()} ${monthLabel}`;
   }
 
   return `${formatDayAndMonth(budget.startDate)} - ${formatDayAndMonth(budget.endDate)}`;
@@ -206,7 +209,18 @@ export const ArchivePage = () => {
                 aria-label={`Удалить бюджет ${formatArchiveRange(budget)}`}
                 title="Удалить бюджет"
               >
-                <DeleteOutlineIcon className={styles.deleteIcon} />
+                <img
+                  src={trashArchiveIconSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className={`${styles.deleteIcon} ${styles.deleteIconClosed}`}
+                />
+                <img
+                  src={trashArchiveOpenIconSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className={`${styles.deleteIcon} ${styles.deleteIconOpen}`}
+                />
               </button>
             </div>
           );
@@ -236,6 +250,7 @@ export const ArchivePage = () => {
 
         <InfoHint
           ariaLabel="Информация об отмене удаления"
+          iconFileName="tooltip_archive.png"
           messages={["Отменить удаление можно сочетанием Ctrl+Z."]}
           autoVisible={isUndoInfoAutoVisible}
           floating={false}

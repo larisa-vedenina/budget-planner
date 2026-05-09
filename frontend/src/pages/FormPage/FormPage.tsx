@@ -473,6 +473,7 @@ const FormPage: React.FC = () => {
         <InfoHint
           ariaLabel="Подсказки по заполнению формы"
           variant="red"
+          iconFileName="tooltip_form.png"
           floating={false}
           messages={[
             "Последнее изменение можно отменить через Ctrl+Z.",

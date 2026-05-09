@@ -160,8 +160,8 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
       ],
       colors: {
         required: "#D87B7B" as CellColor,
-        desired: "#507B5D" as CellColor,
-        notes: "#69B5D3" as CellColor,
+        desired: "#69B5D3" as CellColor,
+        notes: "#ABD0B7" as CellColor,
       },
       cellTitles: {
         required: "Обязательные",

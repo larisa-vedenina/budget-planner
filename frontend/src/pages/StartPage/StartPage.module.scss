@@ -6,9 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: rem(32) rem(16);
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.75), transparent 35%),
-    linear-gradient(180deg, var(--page-background-start) 0%, var(--color-white) 100%);
+  background: var(--page-background-start);
 }
 
 .panel {

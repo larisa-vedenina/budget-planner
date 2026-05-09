@@ -6,9 +6,9 @@ import { NoteModel } from './note';
  * Типы цветов для ячеек
  */
 export type CellColor =
-  | '#D87B7B'    // Красный (темный) - обязательные траты по умолчанию
-  | '#507B5D'    // Зеленый (темный) - желаемые траты по умолчанию
-  | '#69B5D3'    // Голубой - заметки по умолчанию
+  | '#D87B7B'    // Красный (темный)
+  | '#507B5D'    // Зеленый (темный)
+  | '#69B5D3'    // Голубой
   | '#FCD688'    // Желтый (светлый)
   | '#FFDFDF'    // Светло-красный (светлый)
   | '#CAEEFC'    // Светло-голубой (светлый)
@@ -92,7 +92,7 @@ export function getColorCategory(color: CellColor): ColorCategory {
  * @returns Цвет текста: #424242 для светлого фона, #F9F9F9 для темного
  */
 export function getContrastTextColor(backgroundColor: CellColor): TextColor {
-  if (backgroundColor === '#FCD688') {
+  if (backgroundColor === '#FCD688' || backgroundColor === '#ABD0B7') {
     return '#F9F9F9';
   }
 
@@ -153,7 +153,7 @@ export function calculateTotalExpenses(budget: BudgetPeriod): number {
 
 /**
  * Создает новый бюджетный период с дефолтными значениями
- * @remarks Дефолтные цвета: D87B7B для обязательных, 507B5D для желаемых, 69B5D3 для заметок
+ * @remarks Дефолтные цвета: D87B7B для обязательных, 69B5D3 для желаемых, ABD0B7 для заметок
  */
 export function createDefaultBudgetPeriod(): BudgetPeriod {
   const now = new Date();
@@ -172,9 +172,9 @@ export function createDefaultBudgetPeriod(): BudgetPeriod {
     desiredItems: [],
     notes: [],
     colors: {
-      required: '#D87B7B',  // Красный (темный) - обязательные траты по умолчанию
-      desired: '#507B5D',   // Зеленый (темный) - желаемые траты по умолчанию
-      notes: '#69B5D3',     // Голубой - заметки по умолчанию
+      required: '#D87B7B',  // Красный - обязательные траты по умолчанию
+      desired: '#69B5D3',   // Голубой - необязательные траты по умолчанию
+      notes: '#ABD0B7',     // Светло-зеленый - заметки по умолчанию
     },
     cellTitles: { // ДОБАВЛЕНО: дефолтные заголовки ячеек
       required: 'Обязательные',

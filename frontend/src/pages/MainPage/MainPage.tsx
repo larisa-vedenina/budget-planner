@@ -150,6 +150,7 @@ export const MainPage: React.FC = () => {
         className={styles.pageHint}
         ariaLabel="Подсказка по отмене действий"
         variant="gray"
+        iconFileName="tooltip_main.png"
         messages={["Последнее действие в режиме редактирования можно отменить через Ctrl+Z."]}
       />
     </div>

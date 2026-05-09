@@ -6,9 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: rem(24) rem(16);
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.8), transparent 35%),
-    var(--page-background-archive);
+  background: var(--page-background-archive);
 }
 
 .stack {
@@ -83,6 +81,8 @@
   font-weight: 400;
   line-height: 1.2;
   text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -150,6 +150,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   z-index: 1;
   border-radius: rem(8);
   background: rgba(255, 255, 255, 0.92);
@@ -165,8 +166,32 @@
 }
 
 .deleteIcon {
-  font-size: rem(18);
-  color: var(--color-accent-red);
+  position: absolute;
+  width: rem(22);
+  height: rem(27);
+  object-fit: contain;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.deleteIconOpen {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIcon,
+.deleteButton:focus-visible .deleteIcon {
+  transform: scale(1.08);
+}
+
+.deleteButton:hover .deleteIconClosed,
+.deleteButton:focus-visible .deleteIconClosed {
+  opacity: 0;
+}
+
+.deleteButton:hover .deleteIconOpen,
+.deleteButton:focus-visible .deleteIconOpen {
+  opacity: 1;
 }
 
 @media (max-width: 599px) {
