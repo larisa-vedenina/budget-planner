@@ -238,7 +238,7 @@ export const Header: React.FC<HeaderProps> = ({
         <LockToggle
           isLocked={!isEditMode}
           onToggle={onToggleEditMode}
-          size={isMobile ? "small" : "medium"}
+          size="medium"
         />
         <ProfileMenu />
       </Box>
