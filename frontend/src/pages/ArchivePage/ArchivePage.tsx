@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BudgetPeriod } from "../../types/budget";
 import { useBudget } from "../../contexts/BudgetContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -11,6 +11,7 @@ import {
   upsertBudgetHistory,
 } from "../../utils/budgetStorage";
 import { publicImageSrc } from "../../utils/publicImageSrc";
+import { createReturnState, getReturnPath } from "../../utils/navigationState";
 import { saveRemoteBudgetSnapshot } from "../../services/budgetSyncService";
 import styles from "./ArchivePage.module.scss";
 
@@ -61,8 +62,10 @@ const ARCHIVE_CARD_STYLES = [
 
 export const ArchivePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentBudget, loadBudget } = useBudget();
   const { isAuthenticated } = useAuth();
+  const returnPath = getReturnPath(location.state, "/start");
   const [budgets, setBudgets] = useState<BudgetPeriod[]>([]);
   const [deletedBudgets, setDeletedBudgets] = useState<DeletedBudgetEntry[]>([]);
   const [isUndoInfoAutoVisible, setIsUndoInfoAutoVisible] = useState(false);
@@ -142,6 +145,10 @@ export const ArchivePage = () => {
       loadBudget(lastDeletedBudget.budget);
     }
   }, [deletedBudgets, isAuthenticated, loadBudget]);
+
+  const handleBack = useCallback(() => {
+    navigate(returnPath);
+  }, [navigate, returnPath]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -230,7 +237,9 @@ export const ArchivePage = () => {
           <button
             type="button"
             className={styles.createButton}
-            onClick={() => navigate("/form")}
+            onClick={() =>
+              navigate("/form", { state: createReturnState("/archive") })
+            }
           >
             Создать новый
           </button>
@@ -242,7 +251,7 @@ export const ArchivePage = () => {
           <button
             type="button"
             className={styles.backButton}
-            onClick={() => navigate("/start")}
+            onClick={handleBack}
           >
             Вернуться
           </button>
@@ -250,6 +259,7 @@ export const ArchivePage = () => {
 
         <InfoHint
           ariaLabel="Информация об отмене удаления"
+          variant="green"
           iconFileName="tooltip_archive.png"
           messages={["Отменить удаление можно сочетанием Ctrl+Z."]}
           autoVisible={isUndoInfoAutoVisible}

@@ -5,7 +5,7 @@ import styles from "./InfoHint.module.scss";
 interface InfoHintProps {
   messages: string[];
   ariaLabel: string;
-  variant?: "blue" | "red" | "gray";
+  variant?: "blue" | "green" | "red" | "gray";
   iconFileName?: string;
   autoVisible?: boolean;
   floating?: boolean;

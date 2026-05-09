@@ -20,9 +20,11 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./BudgetCard.module.scss";
 
 const COMPLETED_ITEM_HIDE_DELAY_MS = 2000;
+const PLUS_ICON_SRC = publicImageSrc("plus.png");
 
 const formatCardTitle = (value: string) => {
   const normalizedValue = value.trim();
@@ -522,7 +524,12 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     className={styles.addButton}
                   >
                     <Box className={styles.addButtonCenter}>
-                      <span className={styles.addButtonIcon}>+</span>
+                      <img
+                        src={PLUS_ICON_SRC}
+                        alt=""
+                        aria-hidden="true"
+                        className={styles.addButtonIcon}
+                      />
                     </Box>
                   </button>
                 )}
@@ -573,7 +580,12 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                       className={styles.addButton}
                     >
                       <Box className={styles.addButtonCenter}>
-                        <span className={styles.addButtonIcon}>+</span>
+                        <img
+                          src={PLUS_ICON_SRC}
+                          alt=""
+                          aria-hidden="true"
+                          className={styles.addButtonIcon}
+                        />
                       </Box>
                     </button>
                   )}

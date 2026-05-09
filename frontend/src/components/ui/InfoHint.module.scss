@@ -23,6 +23,11 @@
   --hint-shadow: var(--shadow-surface-blue-soft);
 }
 
+.variantGreen {
+  --hint-border: var(--color-accent-green);
+  --hint-shadow: var(--shadow-accent-green);
+}
+
 .variantRed {
   --hint-border: var(--color-accent-red);
   --hint-shadow: var(--shadow-surface-red-soft);

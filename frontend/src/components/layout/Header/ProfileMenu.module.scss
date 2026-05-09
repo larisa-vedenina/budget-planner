@@ -40,7 +40,8 @@
   min-width: rem(52);
   overflow: hidden;
   border-radius: 50%;
-  border-color: var(--color-accent-blue);
+  border: rem(2) solid var(--border-neutral);
+  box-shadow: var(--shadow-neutral-edit);
 }
 
 .loginButton {

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { createReturnState, getReturnPath } from "../../utils/navigationState";
 import {
   clearPendingOtpRequest,
   normalizeEmail,
@@ -38,7 +39,9 @@ const buildBaseFieldErrors = (
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { requestOtp, verifyOtp, isAuthenticated, isAuthLoading } = useAuth();
+  const returnPath = getReturnPath(location.state, "/start");
   const pendingOtpRequest = useMemo(() => loadPendingOtpRequest(), []);
   const [name, setName] = useState(pendingOtpRequest?.name ?? "");
   const [email, setEmail] = useState(pendingOtpRequest?.email ?? "");
@@ -54,9 +57,12 @@ export const LoginPage = () => {
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
-      navigate("/archive", { replace: true });
+      navigate("/archive", {
+        replace: true,
+        state: createReturnState(returnPath),
+      });
     }
-  }, [isAuthLoading, isAuthenticated, navigate]);
+  }, [isAuthLoading, isAuthenticated, navigate, returnPath]);
 
   const resetOtpStep = () => {
     if (!isCodeRequested) {
@@ -151,7 +157,7 @@ export const LoginPage = () => {
 
     try {
       await verifyOtp(name, normalizeEmail(email), code);
-      navigate("/archive");
+      navigate("/archive", { state: createReturnState(returnPath) });
     } catch (error) {
       setErrors({
         general:
@@ -269,7 +275,7 @@ export const LoginPage = () => {
           <button
             type="button"
             className={styles.backButton}
-            onClick={() => navigate("/start")}
+            onClick={() => navigate(returnPath)}
           >
             Вернуться
           </button>

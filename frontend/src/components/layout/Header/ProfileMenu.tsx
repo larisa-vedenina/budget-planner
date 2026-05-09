@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import { ReturnPath, createReturnState } from "../../../utils/navigationState";
 import styles from "./ProfileMenu.module.scss";
 
 const getAvatarFallback = (name: string): string =>
@@ -64,8 +65,13 @@ export const ProfileMenu: React.FC = () => {
     navigate("/start");
   };
 
-  const navigateAndClose = (path: string) => {
+  const navigateAndClose = (path: string, from?: ReturnPath) => {
     setIsOpen(false);
+    if (from) {
+      navigate(path, { state: createReturnState(from) });
+      return;
+    }
+
     navigate(path);
   };
 
@@ -87,7 +93,7 @@ export const ProfileMenu: React.FC = () => {
               <button
                 type="button"
                 className={styles.menuButton}
-                onClick={() => navigateAndClose("/login")}
+                onClick={() => navigateAndClose("/login", "/main")}
               >
                 Войти в личный кабинет
               </button>
@@ -95,7 +101,7 @@ export const ProfileMenu: React.FC = () => {
               <button
                 type="button"
                 className={styles.menuButton}
-                onClick={() => navigateAndClose("/form")}
+                onClick={() => navigateAndClose("/form", "/main")}
               >
                 Создать новый бюджет
               </button>
@@ -105,7 +111,7 @@ export const ProfileMenu: React.FC = () => {
                 className={styles.menuButton}
                 onClick={() => navigateAndClose("/start")}
               >
-                Вернуться на главную
+                Вернуться в начало
               </button>
             </div>
           </div>
@@ -160,15 +166,15 @@ export const ProfileMenu: React.FC = () => {
             <button
               type="button"
               className={styles.menuButton}
-              onClick={() => navigateAndClose("/archive")}
+              onClick={() => navigateAndClose("/archive", "/main")}
             >
-              Архив
+              Вернуться в архив
             </button>
 
             <button
               type="button"
               className={styles.menuButton}
-              onClick={() => navigateAndClose("/form")}
+              onClick={() => navigateAndClose("/form", "/main")}
             >
               Создать новый бюджет
             </button>

@@ -29,6 +29,7 @@ interface RangePickerDayProps extends PickerDayProps {
 }
 
 const calendarIconSrc = publicImageSrc("calendar.png");
+const RANGE_SEPARATOR = " – ";
 
 // Пропускаем только валидные даты, чтобы диапазон не ломался на пустых значениях.
 const isValidDate = (value: Date | null | undefined): value is Date =>
@@ -209,10 +210,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const selectedLabel =
     isValidDate(selectedStartDate) && isValidDate(selectedEndDate)
       ? selectedStartDate.getFullYear() === selectedEndDate.getFullYear()
-        ? `${formatDisplayDate(selectedStartDate, false)} - ${formatDisplayDate(selectedEndDate, false)}`
-        : `${formatDisplayDate(selectedStartDate)} - ${formatDisplayDate(selectedEndDate)}`
+        ? `${formatDisplayDate(selectedStartDate, false)}${RANGE_SEPARATOR}${formatDisplayDate(selectedEndDate, false)}`
+        : `${formatDisplayDate(selectedStartDate)}${RANGE_SEPARATOR}${formatDisplayDate(selectedEndDate)}`
       : isValidDate(selectedStartDate)
-        ? `${formatDisplayDate(selectedStartDate, false)} - ...`
+        ? `${formatDisplayDate(selectedStartDate, false)}${RANGE_SEPARATOR}...`
         : "Выбери период планирования";
 
   const calendarValue = selectedEndDate ?? selectedStartDate ?? new Date();
