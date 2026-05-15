@@ -23,6 +23,7 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
   };
 
   const open = Boolean(anchorEl);
+
   const availableColors: CellColor[] = [
     "#D87B7B",
     "#507B5D",
@@ -36,7 +37,6 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
 
   return (
     <>
-
       <button
         onClick={handleClick}
         className={styles.trigger}
@@ -48,7 +48,6 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
         aria-label="Выбрать цвет фона"
         title="Изменить цвет фона"
       />
-
 
       <Popover
         open={open}

@@ -1,5 +1,3 @@
-
-
 export type SectionType =
   | "period"
   | "income"
@@ -32,6 +30,8 @@ export interface FormData {
     startDate: string;
     endDate: string;
   };
+  city: string;
+  dailySpending: string;
   sections: Partial<Record<SectionType, FormSection>>;
   aiComment: string;
 }
@@ -67,11 +67,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
     id: "income",
     title: "Доходы",
     inputs: {
-      placeholders: [
-        "Откуда деньги?",
-        "Сколько?",
-        "Когда их получишь?",
-      ],
+      placeholders: ["Откуда деньги?", "Сколько?", "Когда их получишь?"],
       items: [],
     },
     color: "#69B5D3",
@@ -81,11 +77,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
     id: "required",
     title: "Обязательные расходы",
     inputs: {
-      placeholders: [
-        "На что?",
-        "Сколько?",
-        "Когда платить?",
-      ],
+      placeholders: ["На что?", "Сколько?", "Когда платить?"],
       items: [],
     },
     color: "#507B5D",
@@ -95,11 +87,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
     id: "desired",
     title: "Необязательные расходы",
     inputs: {
-      placeholders: [
-        "На что?",
-        "Сколько?",
-        "Когда платить?",
-      ],
+      placeholders: ["На что?", "Сколько?", "Когда платить?"],
       items: [],
     },
     color: "#FCD688",
@@ -109,11 +97,7 @@ export const DEFAULT_FORM_SECTIONS: Record<
     id: "assets",
     title: "Активы",
     inputs: {
-      placeholders: [
-        "Что у тебя есть?",
-        "Сколько?",
-        "Что важно учесть?",
-      ],
+      placeholders: ["Что у тебя есть?", "Сколько?", "Что важно учесть?"],
       items: [],
     },
     color: "#CAEEFC",

@@ -1,17 +1,17 @@
-import React from 'react';
+import React from "react";
 import { publicImageSrc } from "../../utils/publicImageSrc";
 import styles from "./LockToggle.module.scss";
 
 interface LockToggleProps {
   isLocked: boolean;
   onToggle: () => void;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
 }
 
 export const LockToggle: React.FC<LockToggleProps> = ({
   isLocked,
   onToggle,
-  size = 'medium',
+  size = "medium",
 }) => {
   const sizeMap = {
     small: { icon: 24, button: 40 },
@@ -35,8 +35,16 @@ export const LockToggle: React.FC<LockToggleProps> = ({
           "--lock-icon-size": `${iconSize / 10}rem`,
         } as React.CSSProperties
       }
-      aria-label={isLocked ? 'Разблокировать редактирование' : 'Заблокировать редактирование'}
-      title={isLocked ? 'Нажмите для редактирования' : 'Нажмите для завершения редактирования'}
+      aria-label={
+        isLocked
+          ? "Разблокировать редактирование"
+          : "Заблокировать редактирование"
+      }
+      title={
+        isLocked
+          ? "Нажмите для редактирования"
+          : "Нажмите для завершения редактирования"
+      }
     >
       <div className={styles.iconWrap}>
         <img src={iconSrc} alt="" aria-hidden="true" className={styles.icon} />

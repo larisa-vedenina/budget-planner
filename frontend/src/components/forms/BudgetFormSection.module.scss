@@ -1,6 +1,5 @@
 @use "../../styles/functions" as *;
 
-
 .section {
   margin-bottom: rem(10);
   padding: rem(25);
@@ -27,12 +26,23 @@
   color: var(--color-text-primary);
 }
 
-
 .inputRow {
   display: flex;
   flex-wrap: wrap;
   gap: rem(10);
   margin-bottom: rem(20);
+}
+
+.mobileAddButton {
+  display: none;
+}
+
+.mobileAddButtonIcon {
+  width: rem(24);
+  height: rem(24);
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .enterHint {
@@ -48,5 +58,45 @@
 @media (max-width: 600px) {
   .section {
     padding: rem(18);
+  }
+
+  .enterHint {
+    display: none;
+  }
+
+  .mobileAddButton {
+    width: rem(50);
+    min-width: rem(50);
+    height: rem(50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: rem(2) solid var(--section-color);
+    border-radius: rem(8);
+    background: var(--color-white);
+    box-shadow: none;
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .mobileAddButton:hover,
+  .mobileAddButton:focus-visible,
+  .mobileAddButton:active {
+    transform: translate(rem(3), rem(2));
+    box-shadow: none;
+  }
+
+  .mobileAddButton:disabled {
+    border-color: var(--border-neutral);
+    box-shadow: none;
+    cursor: default;
+  }
+
+  .mobileAddButton:disabled:hover,
+  .mobileAddButton:disabled:focus-visible,
+  .mobileAddButton:disabled:active {
+    transform: none;
+    box-shadow: none;
   }
 }

@@ -1,13 +1,11 @@
 @use "../../styles/functions" as *;
 
-
 .item {
   display: flex;
-  gap: rem(10);
+  gap: rem(3);
   align-items: flex-start;
   margin-bottom: rem(10);
 }
-
 
 .segmentRow {
   flex: 1;
@@ -22,7 +20,7 @@
   display: flex;
   align-items: stretch;
   border: rem(2) solid var(--item-border-color);
-  border-radius: var(--radius-sm);
+  border-radius: rem(8);
   background: var(--color-white);
   box-shadow: var(--item-shadow, var(--shadow-neutral-edit));
   min-width: 0;
@@ -42,7 +40,6 @@
   width: rem(310);
   min-width: rem(141);
 }
-
 
 .segmentContent {
   width: 100%;
@@ -75,7 +72,6 @@
 }
 
 @media (max-width: 768px) {
-
   .item {
     flex-direction: column;
     align-items: stretch;
@@ -86,6 +82,10 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) rem(120);
     gap: rem(10);
+  }
+
+  .segment {
+    box-shadow: none;
   }
 
   .textSegment {

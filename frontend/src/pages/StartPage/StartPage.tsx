@@ -8,8 +8,6 @@ export const StartPage = () => {
   return (
     <main className={styles.page}>
       <div className={styles.panel}>
-
-
         <button
           type="button"
           className={`${styles.actionButton} ${styles.primaryButton}`}

@@ -11,6 +11,7 @@ interface InfoHintProps {
   floating?: boolean;
   className?: string;
 }
+
 const InfoHint: React.FC<InfoHintProps> = ({
   messages,
   ariaLabel,

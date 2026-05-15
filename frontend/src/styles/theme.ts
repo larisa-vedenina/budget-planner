@@ -298,6 +298,7 @@ export const cssVariables: Record<string, string> = {
   "--radius-md": radiusTokens.md,
   "--radius-pill": radiusTokens.pill,
   "--transition-fast": motion.fast,
+
   "--color-white": surfaceColors.white,
   "--color-surface-muted": surfaceColors.white,
   "--color-surface-soft-blue": accentColors.blue.soft,

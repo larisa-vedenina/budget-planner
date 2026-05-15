@@ -10,6 +10,7 @@ interface SortableNoteItemProps {
   isEditing: boolean;
   onUpdate: (note: NoteModel) => void;
   onDelete: (id: string) => void;
+  backgroundColor?: string;
 }
 
 export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
@@ -17,6 +18,7 @@ export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
   isEditing,
   onUpdate,
   onDelete,
+  backgroundColor,
 }) => {
   const {
     attributes,
@@ -55,6 +57,7 @@ export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
         isEditing={isEditing}
         onUpdate={onUpdate}
         onDelete={onDelete}
+        backgroundColor={backgroundColor}
         dragHandleProps={
           isEditing
             ? {

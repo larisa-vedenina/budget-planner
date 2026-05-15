@@ -12,10 +12,12 @@ interface FormInputItemProps {
   onUpdate: (updates: Partial<FormInputItemType>) => void;
   borderColor: string;
 }
+
 const parseAmountValue = (value: string): number => {
   const parsedValue = Number.parseFloat(value);
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 };
+
 const fieldSx = (fontSize: string) => ({
   height: "100%",
   "& .MuiInputBase-root": {
@@ -36,6 +38,7 @@ const fieldSx = (fontSize: string) => ({
     lineHeight: 1.4,
   },
 });
+
 const focusAndSelect = <
   T extends HTMLInputElement | HTMLTextAreaElement,
 >(
@@ -64,6 +67,7 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
   const textInputRef = useRef<HTMLInputElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
   useEffect(() => {
     setEditText(item.text);
   }, [item.text]);
@@ -93,12 +97,14 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
       focusAndSelect(commentInputRef);
     }
   }, [isEditingComment]);
+
   const handleSaveText = () => {
     if (editText.trim() !== item.text) {
       onUpdate({ text: editText.trim() });
     }
     setIsEditingText(false);
   };
+
   const handleSaveAmount = () => {
     const amountValue = parseAmountValue(editAmount);
     if (amountValue !== item.amount) {
@@ -106,12 +112,14 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
     }
     setIsEditingAmount(false);
   };
+
   const handleSaveComment = () => {
     if (editComment.trim() !== (item.comment || "")) {
       onUpdate({ comment: editComment.trim() || undefined });
     }
     setIsEditingComment(false);
   };
+
   const handleKeyDown = (
     event: React.KeyboardEvent,
     type: "text" | "amount" | "comment",
@@ -138,6 +146,7 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
       }
     }
   };
+
   const formatAmount = (amount: number) => `${amount.toLocaleString("ru-RU")}₽`;
 
   return (
@@ -151,7 +160,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
       }
       >
         <Box className={styles.segmentRow}>
-
           <Box className={`${styles.segment} ${styles.textSegment}`}>
             {isEditingText ? (
               <TextField
@@ -189,7 +197,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             )}
           </Box>
 
-
           <Box className={`${styles.segment} ${styles.amountSegment}`}>
             {isEditingAmount ? (
               <TextField
@@ -224,7 +231,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             </Typography>
             )}
           </Box>
-
 
           {(item.comment || isEditingComment) && (
             <Box className={`${styles.segment} ${styles.commentSegment}`}>
@@ -265,7 +271,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             </Box>
           )}
         </Box>
-
 
         <IconButton
           onClick={onRemove}

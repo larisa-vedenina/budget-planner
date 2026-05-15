@@ -15,6 +15,7 @@ export interface StoredFormDraft {
   history: FormData[];
   historyIndex: number;
 }
+
 const normalizeSection = (
   sectionType: SectionType,
   section?: Partial<FormSection>,
@@ -27,6 +28,7 @@ const normalizeSection = (
     items: section?.inputs?.items ?? [],
   },
 });
+
 export const createEmptyFormData = (storedData?: Partial<FormData>): FormData => {
   const sections = MAIN_FORM_SECTIONS.reduce(
     (acc, sectionType) => ({
@@ -51,6 +53,8 @@ export const createEmptyFormData = (storedData?: Partial<FormData>): FormData =>
       startDate: storedData?.period?.startDate ?? "",
       endDate: storedData?.period?.endDate ?? "",
     },
+    city: storedData?.city ?? "",
+    dailySpending: storedData?.dailySpending ?? "",
     sections,
     aiComment: storedData?.aiComment ?? "",
   };
@@ -65,6 +69,7 @@ const createEmptyDraft = (): StoredFormDraft => {
     historyIndex: 0,
   };
 };
+
 export const loadFormDraft = (): StoredFormDraft => {
   const emptyDraft = createEmptyDraft();
 
@@ -100,6 +105,7 @@ export const loadFormDraft = (): StoredFormDraft => {
     historyIndex: safeHistoryIndex,
   };
 };
+
 export const saveFormDraft = (draft: StoredFormDraft): void => {
   if (!StorageService.isSupported()) {
     return;

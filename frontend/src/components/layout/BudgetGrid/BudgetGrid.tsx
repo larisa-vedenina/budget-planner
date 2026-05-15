@@ -84,11 +84,14 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
     budget.cellTitles.desired.trim().toUpperCase() === "ЖЕЛАЕМЫЕ"
       ? "НЕОБЯЗАТЕЛЬНЫЕ"
       : budget.cellTitles.desired;
+
   const getFilteredItems = useCallback(
     (items: ChecklistItemModel[]) => {
       if (!items || items.length === 0) return [];
+
       const activeItems = items.filter((item) => !item.completed);
       const completedItems = items.filter((item) => item.completed);
+
       const sortedActive = isEditMode
         ? activeItems
         : [...activeItems].sort((a, b) => {
@@ -99,15 +102,18 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             );
           });
+
       const sortedCompleted = [...completedItems].sort(
         (a, b) =>
           new Date(b.completedAt || 0).getTime() -
           new Date(a.completedAt || 0).getTime(),
       );
+
       return [...sortedActive, ...sortedCompleted];
     },
     [isEditMode],
   );
+
   const filteredRequiredItems = useMemo(
     () => getFilteredItems(budget.requiredItems),
     [budget.requiredItems, getFilteredItems],
@@ -117,6 +123,7 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
     () => getFilteredItems(budget.desiredItems),
     [budget.desiredItems, getFilteredItems],
   );
+
   const requiredActiveAmount = useMemo(
     () =>
       calculateActiveExpenses(
@@ -132,18 +139,23 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
       ),
     [filteredDesiredItems],
   );
+
   const calculateCellHeight = useCallback(
     (items: ChecklistItemModel[], delayedCompletedCount = 0): number => {
       const MIN_HEIGHT = 350;
+
       const HEADER_HEIGHT = 80;
       const ITEM_HEIGHT = 80;
       const ADD_BUTTON_HEIGHT = isEditMode ? 80 : 0;
+
       const activeItems = items.filter((item) => !item.completed);
       const completedCount = items.filter((item) => item.completed).length;
       const visibleCompletedCount = isEditMode
         ? Math.min(Math.max(completedCount - delayedCompletedCount, 0), 2)
         : 0;
+
       const delayedCompletedBuffer = delayedCompletedCount;
+
       const visibleHeight =
         HEADER_HEIGHT +
         activeItems.length * ITEM_HEIGHT +
@@ -171,7 +183,9 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
       calculateCellHeight(filteredDesiredItems, delayedCompletedCounts.desired),
     [calculateCellHeight, delayedCompletedCounts.desired, filteredDesiredItems],
   );
+
   const notesColumnHeight = requiredHeight + desiredHeight + 20;
+
   const handleItemDragEnd = (
     itemId: string,
     category: "required" | "desired",
@@ -203,7 +217,6 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
           gridTemplateRows: `${requiredHeight}px ${desiredHeight}px`,
         }}
       >
-
         <div
           className={styles.cell}
           style={{
@@ -236,7 +249,6 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
           />
         </div>
 
-
         <div
           className={styles.cell}
           style={{
@@ -268,7 +280,6 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
             onDelayedCompletedCountChange={handleDesiredDelayedCompletedChange}
           />
         </div>
-
 
         <div
           className={styles.cell}

@@ -26,6 +26,7 @@ import {
   loadCurrentBudget,
   loadStoredEditMode,
   saveBudgetSnapshot,
+  saveStoredEditMode,
   serializeBudget,
   SerializedBudgetPeriod,
 } from "../utils/budgetStorage";
@@ -34,12 +35,24 @@ import {
   loadRemoteBudgetSnapshot,
   saveRemoteBudgetSnapshot,
 } from "../services/budgetSyncService";
+import { generateAIBudgetPlan } from "../services/aiBudgetService";
+import { buildAINotesFromPlan } from "../utils/aiBudgetPlanToBudget";
+import {
+  CALCULATED_BUDGET_NOTE_ID,
+  canBuildAIRefreshRequest,
+  createAIBudgetPlanRequestFromBudget,
+  createAIRefreshSignature,
+  hasSignificantAIPlanChanges,
+  isGeneratedAINote,
+  withCalculatedBudgetNote,
+} from "../utils/budgetAI";
 
 interface BudgetContextType {
   currentBudget: BudgetPeriod | null;
   isEditMode: boolean;
   toggleEditMode: () => void;
 
+  // Пункты
   addItem: (item: ChecklistItemModel, category: "required" | "desired") => void;
   updateItem: (item: ChecklistItemModel) => void;
   deleteItem: (id: string, category: "required" | "desired") => void;
@@ -50,32 +63,40 @@ interface BudgetContextType {
     toCategory: "required" | "desired",
   ) => void;
 
+  // Заметки
   addNote: (note: NoteModel) => void;
   updateNote: (note: NoteModel) => void;
   deleteNote: (id: string) => void;
 
+  // Цвета
   updateColor: (
     cellType: "required" | "desired" | "notes",
     color: CellColor,
   ) => void;
 
+  // Бюджет и период
   updateBudgetIncome: (newIncome: number) => void;
   updatePeriod: (startDate: Date, endDate: Date) => void;
 
+  // Заголовки
   updateTitle: (
     category: "required" | "desired" | "notes",
     newTitle: string,
   ) => void;
 
+  // Сохранение
   loadBudget: (budget: BudgetPeriod) => void;
   createNewBudget: () => void;
   saveBudget: () => void;
+  clearStorage: () => void;
 
+  // История
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
 
+  // Перетаскивание
   reorderItems: (
     category: "required" | "desired" | "notes",
     oldIndex: number,
@@ -86,6 +107,11 @@ interface BudgetContextType {
     fromCategory: "required" | "desired",
     toCategory: "required" | "desired",
   ) => void;
+
+  // ИИ
+  refreshAIPlan: () => Promise<void>;
+  canRefreshAIPlan: boolean;
+  isRefreshingAIPlan: boolean;
 }
 
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
@@ -104,6 +130,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
   const [currentBudget, setCurrentBudget] = useState<BudgetPeriod | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isRefreshingAIPlan, setIsRefreshingAIPlan] = useState(false);
   const [history, setHistory] = useState<BudgetHistoryItem[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const lastAuthenticatedUserIdRef = useRef<string | null>(null);
@@ -164,21 +191,39 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     [],
   );
 
+  const normalizeBudgetForState = useCallback((budget: BudgetPeriod) => {
+    const normalizedBudget = withCalculatedBudgetNote(budget);
+
+    if (
+      normalizedBudget.aiPlanSignature ||
+      !canBuildAIRefreshRequest(normalizedBudget)
+    ) {
+      return normalizedBudget;
+    }
+
+    return {
+      ...normalizedBudget,
+      aiPlanSignature: createAIRefreshSignature(normalizedBudget),
+    };
+  }, []);
+
   const restoreLocalBudgetState = useCallback(
     (fallbackAction: string) => {
       setIsEditMode(loadStoredEditMode());
 
       const storedBudget = loadCurrentBudget();
       if (storedBudget) {
-        setCurrentBudget(storedBudget);
-        resetHistoryState(storedBudget, "Загрузка бюджета");
+        const normalizedBudget = normalizeBudgetForState(storedBudget);
+        setCurrentBudget(normalizedBudget);
+        resetHistoryState(normalizedBudget, "Загрузка бюджета");
         return;
       }
 
-      setCurrentBudget(fallbackBudget);
-      resetHistoryState(fallbackBudget, fallbackAction);
+      const normalizedFallbackBudget = normalizeBudgetForState(fallbackBudget);
+      setCurrentBudget(normalizedFallbackBudget);
+      resetHistoryState(normalizedFallbackBudget, fallbackAction);
     },
-    [fallbackBudget, resetHistoryState],
+    [fallbackBudget, normalizeBudgetForState, resetHistoryState],
   );
 
   useEffect(() => {
@@ -221,8 +266,9 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
         console.error("Ошибка загрузки бюджета:", error);
 
         if (!isCancelled) {
-          setCurrentBudget(fallbackBudget);
-          resetHistoryState(fallbackBudget, "Восстановление бюджета");
+          const normalizedFallbackBudget = normalizeBudgetForState(fallbackBudget);
+          setCurrentBudget(normalizedFallbackBudget);
+          resetHistoryState(normalizedFallbackBudget, "Восстановление бюджета");
         }
       }
     };
@@ -237,6 +283,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     authenticatedUserId,
     isAuthenticated,
     isAuthLoading,
+    normalizeBudgetForState,
     resetHistoryState,
     restoreLocalBudgetState,
   ]);
@@ -281,7 +328,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     const completedExpenses = calculateCompletedExpenses(updatedBudget);
     updatedBudget.remaining = updatedBudget.totalIncome - completedExpenses;
 
-    return updatedBudget;
+    return withCalculatedBudgetNote(updatedBudget);
   };
 
   const addToHistory = useCallback(
@@ -346,6 +393,24 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
   const toggleEditMode = () => setIsEditMode(!isEditMode);
 
+  const switchToViewMode = useCallback(() => {
+    setIsEditMode(false);
+    saveStoredEditMode(false);
+  }, []);
+
+  const sortActiveItemsByPriority = (
+    items: ChecklistItemModel[],
+  ): ChecklistItemModel[] => {
+    const activeItems = items.filter((item) => !item.completed);
+    const completedItems = items.filter((item) => item.completed);
+
+    return [
+      ...activeItems.filter((item) => item.priority === "priority"),
+      ...activeItems.filter((item) => item.priority !== "priority"),
+      ...completedItems,
+    ];
+  };
+
   const addItem = (
     item: ChecklistItemModel,
     category: "required" | "desired",
@@ -355,22 +420,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     const items =
       category === "required" ? budget.requiredItems : budget.desiredItems;
     const updatedItems = [...items, item];
-
-    const sortedItems = [...updatedItems].sort((a, b) => {
-      if (a.completed && !b.completed) return 1;
-      if (!a.completed && b.completed) return -1;
-
-      if (!a.completed && !b.completed) {
-        if (a.priority === "priority" && b.priority !== "priority") return -1;
-        if (a.priority !== "priority" && b.priority === "priority") return 1;
-
-        return (
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-      }
-
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
+    const sortedItems = sortActiveItemsByPriority(updatedItems);
 
     const updatedRequiredItems =
       category === "required" ? sortedItems : budget.requiredItems;
@@ -390,24 +440,35 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
   const updateItem = (updatedItem: ChecklistItemModel) => {
     const budget = currentBudget || fallbackBudget;
 
-    let itemFound = false;
-    const updatedRequiredItems = budget.requiredItems.map((item) => {
-      if (item.id === updatedItem.id) {
-        itemFound = true;
-        return updatedItem;
-      }
-      return item;
-    });
+    const previousRequiredItem = budget.requiredItems.find(
+      (item) => item.id === updatedItem.id,
+    );
+    const previousDesiredItem = budget.desiredItems.find(
+      (item) => item.id === updatedItem.id,
+    );
+    const shouldSortByPriority =
+      (previousRequiredItem?.priority ?? previousDesiredItem?.priority) !==
+      updatedItem.priority;
 
-    let updatedDesiredItems = budget.desiredItems;
-    if (!itemFound) {
-      updatedDesiredItems = budget.desiredItems.map((item) => {
-        if (item.id === updatedItem.id) {
-          return updatedItem;
-        }
-        return item;
-      });
-    }
+    const nextRequiredItems = previousRequiredItem
+      ? budget.requiredItems.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item,
+        )
+      : budget.requiredItems;
+    const nextDesiredItems = previousDesiredItem
+      ? budget.desiredItems.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item,
+        )
+      : budget.desiredItems;
+
+    const updatedRequiredItems =
+      shouldSortByPriority && previousRequiredItem
+        ? sortActiveItemsByPriority(nextRequiredItems)
+        : nextRequiredItems;
+    const updatedDesiredItems =
+      shouldSortByPriority && previousDesiredItem
+        ? sortActiveItemsByPriority(nextDesiredItems)
+        : nextDesiredItems;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       requiredItems: updatedRequiredItems,
@@ -540,6 +601,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
         itemToMove.completedAt,
         itemToMove.dragState,
         itemToMove.createdAt,
+        itemToMove.badge,
       );
 
       const updatedSourceItems = sourceItems.filter(
@@ -597,9 +659,13 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteNote = (id: string) => {
     const budget = currentBudget || fallbackBudget;
+    const isDeletingCalculatedBudgetNote = id === CALCULATED_BUDGET_NOTE_ID;
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       notes: budget.notes.filter((note) => note.id !== id),
+      isCalculatedBudgetNoteHidden:
+        isDeletingCalculatedBudgetNote ||
+        budget.isCalculatedBudgetNoteHidden,
     });
 
     addToHistory("Удаление заметки", updatedBudget);
@@ -665,12 +731,15 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const loadBudget = (budget: BudgetPeriod) => {
-    setCurrentBudget(budget);
-    resetHistoryState(budget, "Загрузка бюджета");
+    const normalizedBudget = normalizeBudgetForState(budget);
+    switchToViewMode();
+    setCurrentBudget(normalizedBudget);
+    resetHistoryState(normalizedBudget, "Загрузка бюджета");
   };
 
   const createNewBudget = () => {
-    const newBudget = createDefaultBudgetPeriod();
+    const newBudget = normalizeBudgetForState(createDefaultBudgetPeriod());
+    switchToViewMode();
     setCurrentBudget(newBudget);
     resetHistoryState(newBudget, "Создание нового бюджета");
   };
@@ -678,6 +747,60 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
   const saveBudget = () => {
     saveToStorage();
   };
+
+  const clearStorage = () => {
+    clearBudgetStorage();
+
+    if (isAuthenticated) {
+      void saveRemoteBudgetSnapshot(getBudgetSnapshot()).catch((error) => {
+        console.error("Не удалось очистить бюджет на сервере:", error);
+      });
+    }
+
+    window.location.reload();
+  };
+
+  const budgetForAIRefresh = currentBudget || fallbackBudget;
+  const canRefreshAIPlan = useMemo(() => {
+    if (!canBuildAIRefreshRequest(budgetForAIRefresh) || isRefreshingAIPlan) {
+      return false;
+    }
+
+    return hasSignificantAIPlanChanges(budgetForAIRefresh);
+  }, [budgetForAIRefresh, isRefreshingAIPlan]);
+
+  const refreshAIPlan = useCallback(async () => {
+    const budget = currentBudget || fallbackBudget;
+
+    if (!canBuildAIRefreshRequest(budget)) {
+      return;
+    }
+
+    setIsRefreshingAIPlan(true);
+
+    try {
+      const requestPayload = createAIBudgetPlanRequestFromBudget(budget);
+      const aiPlan = await generateAIBudgetPlan(requestPayload);
+      const generatedAINotes = buildAINotesFromPlan(aiPlan);
+      const preservedNotes = budget.notes.filter(
+        (note) => !isGeneratedAINote(note),
+      );
+
+      const updatedBudget = updateBudgetWithRecalculation(budget, {
+        notes: [...generatedAINotes, ...preservedNotes],
+        aiPlanSignature: createAIRefreshSignature(budget),
+      });
+
+      addToHistory("Обновление AI-плана", updatedBudget);
+      setCurrentBudget(updatedBudget);
+      switchToViewMode();
+    } catch (error) {
+      console.error("Не удалось обновить AI-план:", error);
+      window.alert("Не получилось обновить AI-план. Попробуй еще раз позже.");
+    } finally {
+      setIsRefreshingAIPlan(false);
+    }
+  }, [addToHistory, currentBudget, fallbackBudget, switchToViewMode]);
 
   const value: BudgetContextType = {
     currentBudget: currentBudget || fallbackBudget,
@@ -698,12 +821,16 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     loadBudget,
     createNewBudget,
     saveBudget,
+    clearStorage,
     undo,
     redo,
     canUndo: historyIndex > 0,
     canRedo: historyIndex < history.length - 1,
     reorderItems,
     moveItemBetweenCategories,
+    refreshAIPlan,
+    canRefreshAIPlan,
+    isRefreshingAIPlan,
   };
 
   return (

@@ -20,11 +20,9 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./BudgetCard.module.scss";
 
 const COMPLETED_ITEM_HIDE_DELAY_MS = 2000;
-const PLUS_ICON_SRC = publicImageSrc("plus.png");
 
 const formatCardTitle = (value: string) => {
   const normalizedValue = value.trim();
@@ -116,7 +114,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     delayedHideTimeoutsRef.current = {};
   }, []);
 
-  // Настройка сенсоров для DnD
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -125,7 +122,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     }),
   );
 
-  // Синхронизация с пропсами
   useEffect(() => {
     if (isNotesColumn) {
       setLocalItems(items);
@@ -167,7 +163,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     }
   }, [amount]);
 
-  // После отметки чекбокса оставляем пункт на месте еще на пару секунд.
   useEffect(() => {
     if (isNotesColumn) {
       clearDelayedCompletionTimeouts();
@@ -256,7 +251,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     onDelayedCompletedCountChange,
   ]);
 
-  // РАЗДЕЛЯЕМ ПУНКТЫ НА АКТИВНЫЕ И ВЫПОЛНЕННЫЕ
   const { activeItems, completedItems } = useMemo(() => {
     if (isNotesColumn) {
       return {
@@ -267,17 +261,14 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
     const checklistItems = localItems as ChecklistItemModel[];
 
-    // Активные (не выполненные) пункты
     const active = checklistItems.filter(
       (item) => !item.completed || delayedCompletedIds.includes(item.id),
     );
 
-    // Выполненные пункты
     const completed = checklistItems.filter(
       (item) => item.completed && !delayedCompletedIds.includes(item.id),
     );
 
-    // Сортируем выполненные: самые свежие сверху
     const sortedCompleted = [...completed].sort(
       (a, b) =>
         new Date(b.completedAt || 0).getTime() -
@@ -290,7 +281,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     };
   }, [delayedCompletedIds, isNotesColumn, localItems]);
 
-  // Рассчет суммы активных расходов
   useEffect(() => {
     if (!isNotesColumn) {
       const activeAmount = (activeItems as ChecklistItemModel[]).reduce(
@@ -301,7 +291,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     }
   }, [activeItems, isNotesColumn]);
 
-  // Получаем ID элементов для SortableContext (только активные)
   const activeItemIds = useMemo(() => {
     if (isNotesColumn) {
       return (activeItems as NoteModel[]).map((note) => note.id);
@@ -309,7 +298,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     return (activeItems as ChecklistItemModel[]).map((item) => item.id);
   }, [activeItems, isNotesColumn]);
 
-  // Завершение перетаскивания
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -344,7 +332,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     }
   };
 
-  // Обработчики
   const handleItemUpdate = (updatedItem: ChecklistItemModel) => {
     onItemUpdate(updatedItem);
   };
@@ -412,14 +399,12 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     }
   };
 
-  // Фокус на инпут при начале редактирования
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
     }
   }, [isEditingTitle]);
 
-  // Клик вне поля ввода
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -451,9 +436,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
         } as React.CSSProperties
       }
     >
-      {/* Заголовок и сумма */}
       <Box className={styles.header}>
-        {/* Редактируемый заголовок */}
         <Box className={styles.titleWrap}>
           {isEditMode && isEditingTitle ? (
             <input
@@ -477,7 +460,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
           )}
         </Box>
 
-        {/* Сумма активных расходов */}
         {!isNotesColumn && localAmount !== undefined && (
           <Box className={styles.amountWrap}>
             <Typography className={styles.amount}>
@@ -487,14 +469,12 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
         )}
       </Box>
 
-      {/* ОСНОВНОЙ КОНТЕНТ - БЕЗ СКРОЛЛА ДЛЯ АКТИВНЫХ ПУНКТОВ */}
       <Box
         className={`${styles.content} ${
           isNotesColumn ? styles.notesContent : ""
         }`}
       >
         {isNotesColumn ? (
-          // ЗАМЕТКИ
           <DndContext
             sensors={sensors}
             collisionDetection={closestCorners}
@@ -505,7 +485,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                 items={activeItemIds}
                 strategy={verticalListSortingStrategy}
               >
-                {/* Активные заметки */}
                 {(activeItems as NoteModel[]).map((note) => (
                   <SortableNoteItem
                     key={note.id}
@@ -513,10 +492,10 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     isEditing={isEditMode}
                     onUpdate={onNoteUpdate}
                     onDelete={onNoteDelete}
+                    backgroundColor={backgroundColor}
                   />
                 ))}
 
-                {/* КНОПКА ДОБАВЛЕНИЯ ЗАМЕТКИ В РЕЖИМЕ РЕДАКТИРОВАНИЯ */}
                 {isEditMode && (
                   <button
                     type="button"
@@ -524,17 +503,11 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     className={styles.addButton}
                   >
                     <Box className={styles.addButtonCenter}>
-                      <img
-                        src={PLUS_ICON_SRC}
-                        alt=""
-                        aria-hidden="true"
-                        className={styles.addButtonIcon}
-                      />
+                      добавить
                     </Box>
                   </button>
                 )}
 
-                {/* Сообщение если нет заметок */}
                 {(activeItems as NoteModel[]).length === 0 && !isEditMode && (
                   <Box className={styles.emptyMessage}>
                     <div className={styles.emptyMessageText}>Пока тут нет заметок</div>
@@ -545,7 +518,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
           </DndContext>
         ) : (
-          // ПУНКТЫ РАСХОДОВ
           <>
             <Box className={styles.activeItemsWrap}>
               <DndContext
@@ -557,7 +529,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                   items={activeItemIds}
                   strategy={verticalListSortingStrategy}
                 >
-                  {/* АКТИВНЫЕ ПУНКТЫ (не выполненные) */}
                   {(activeItems as ChecklistItemModel[]).map((item) => (
                     <SortableChecklistItem
                       key={item.id}
@@ -572,7 +543,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     />
                   ))}
 
-                  {/* КНОПКА ДОБАВЛЕНИЯ В РЕЖИМЕ РЕДАКТИРОВАНИЯ */}
                   {isEditMode && (
                     <button
                       type="button"
@@ -580,12 +550,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                       className={styles.addButton}
                     >
                       <Box className={styles.addButtonCenter}>
-                        <img
-                          src={PLUS_ICON_SRC}
-                          alt=""
-                          aria-hidden="true"
-                          className={styles.addButtonIcon}
-                        />
+                        добавить
                       </Box>
                     </button>
                   )}
@@ -594,7 +559,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               </DndContext>
             </Box>
 
-            {/* ВЫПОЛНЕННЫЕ ПУНКТЫ (только в режиме редактирования) */}
             {isEditMode && (
               <Box
                 className={`${styles.completedSection} ${
@@ -610,7 +574,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     completedItems.length > 2 ? styles.completedScrollerScrollable : ""
                   }`}
                 >
-                  {/* ВСЕ ВЫПОЛНЕННЫЕ ПУНКТЫ */}
                   {completedItems.map((item) => (
                     <ChecklistItem
                       key={`completed-${item.id}`}
@@ -623,7 +586,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     />
                   ))}
 
-                  {/* Сообщение если нет выполненных пунктов */}
                   {completedItems.length === 0 && (
                     <Box className={styles.completedEmptyMessage}>
                       <Typography>Нет выполненных пунктов</Typography>
@@ -636,7 +598,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
         )}
       </Box>
 
-      {/* Кнопка выбора цвета */}
       {isEditMode && (
         <ColorPickerButton
           currentColor={backgroundColor}

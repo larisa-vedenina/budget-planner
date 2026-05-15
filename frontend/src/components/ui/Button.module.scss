@@ -1,0 +1,46 @@
+@use "../../styles/functions" as *;
+
+.button {
+  width: var(--button-width, auto);
+  padding: rem(15) rem(50);
+  border: rem(4) solid var(--button-border, var(--color-accent-red));
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--button-shadow, var(--shadow-accent-red));
+  color: var(--color-text-primary);
+  font-size: rem(24);
+  font-weight: 400;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.button:hover {
+  transform: translate(-rem(1), rem(1));
+  box-shadow: var(--button-shadow, var(--shadow-accent-red));
+}
+
+.fullWidth {
+  --button-width: 100%;
+}
+
+.primary {
+  --button-border: var(--color-accent-red);
+  --button-shadow: var(--shadow-accent-red);
+}
+
+.secondary {
+  --button-border: var(--color-accent-blue);
+  --button-shadow: var(--shadow-accent-blue);
+}
+
+.danger {
+  --button-border: var(--color-accent-red);
+  --button-shadow: var(--shadow-accent-red);
+}
+
+.success {
+  --button-border: var(--color-accent-green);
+  --button-shadow: var(--shadow-accent-green);
+}

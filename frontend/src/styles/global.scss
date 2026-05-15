@@ -1,6 +1,6 @@
 @use "./functions" as *;
 
-
+/* Шрифты */
 
 @font-face {
   font-family: "Roboto Condensed";
@@ -28,7 +28,7 @@
   font-display: block;
 }
 
-
+/* База */
 
 *,
 *::before,
@@ -125,7 +125,7 @@ select {
     transform var(--transition-fast);
 }
 
-
+/* Скроллбар */
 
 ::-webkit-scrollbar {
   width: rem(8);
@@ -146,7 +146,7 @@ select {
   background: #c1c1c1;
 }
 
-
+/* Доступность */
 
 @media (prefers-reduced-motion: reduce) {
   *,

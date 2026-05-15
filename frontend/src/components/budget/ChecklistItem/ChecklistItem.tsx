@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ChecklistItemModel } from "../../../types/checklist-item";
+import {
+  ChecklistItemBadge,
+  ChecklistItemModel,
+} from "../../../types/checklist-item";
 import { Box } from "@mui/material";
 import { pxToRem } from "../../../styles/units";
 import { publicImageSrc } from "../../../utils/publicImageSrc";
@@ -15,6 +18,12 @@ const trashIconSrc = publicImageSrc("trash.png");
 const trashOpenIconSrc = publicImageSrc("trash_open.png");
 const starIconSrc = publicImageSrc("star.png");
 const dragIconSrc = publicImageSrc("drag.png");
+
+const BADGE_LABELS: Record<ChecklistItemBadge, string> = {
+  debt: "долг",
+  goal: "цель",
+  asset: "актив",
+};
 
 interface ChecklistItemProps {
   item: ChecklistItemModel;
@@ -42,13 +51,18 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const isEditingTitleRef = useRef(isEditingTitle);
+  const isEditingAmountRef = useRef(isEditingAmount);
+
   const getPriorityBorderColor = (): string => {
     const darkCellColors = ["#D87B7B", "#507B5D", "#69B5D3"];
     return darkCellColors.includes(backgroundColor) ? "#FFDFDF" : "#D87B7B";
   };
+
   const shouldShowPriorityStar = () => {
     return isEditing && !item.completed;
   };
+
   const handleTitleSave = useCallback(() => {
     const nextTitle = tempTitle.trim();
 
@@ -58,6 +72,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     }
     setIsEditingTitle(false);
   }, [item, onUpdate, tempTitle]);
+
   const handleAmountSave = useCallback(() => {
     const amount = parseFloat(tempAmount);
     if (!isNaN(amount) && amount >= 0 && amount !== item.amount) {
@@ -66,6 +81,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     }
     setIsEditingAmount(false);
   }, [item, onUpdate, tempAmount]);
+
   const handleTitleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleTitleSave();
     if (e.key === "Escape") {
@@ -81,6 +97,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       setIsEditingAmount(false);
     }
   };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -105,6 +122,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [handleAmountSave, handleTitleSave, isEditingAmount, isEditingTitle]);
+
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
@@ -113,17 +131,26 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
       amountInputRef.current.focus();
     }
   }, [isEditingTitle, isEditingAmount]);
-  useEffect(() => {
-    if (!isEditingTitle) {
-      setTempTitle(item.title);
-    }
-  }, [isEditingTitle, item.title]);
 
   useEffect(() => {
-    if (!isEditingAmount) {
+    isEditingTitleRef.current = isEditingTitle;
+  }, [isEditingTitle]);
+
+  useEffect(() => {
+    isEditingAmountRef.current = isEditingAmount;
+  }, [isEditingAmount]);
+
+  useEffect(() => {
+    if (!isEditingTitleRef.current) {
+      setTempTitle(item.title);
+    }
+  }, [item.title]);
+
+  useEffect(() => {
+    if (!isEditingAmountRef.current) {
       setTempAmount(item.amount.toString());
     }
-  }, [isEditingAmount, item.amount]);
+  }, [item.amount]);
 
   const togglePriority = () => {
     onUpdate(item.togglePriority());
@@ -134,7 +161,14 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     "--checkbox-color": backgroundColor,
     "--completed-strike-color": backgroundColor,
     "--completed-strike-left": isEditing ? pxToRem(95) : pxToRem(54),
-    "--completed-strike-right": isEditing ? pxToRem(60) : pxToRem(15),
+    "--completed-strike-right": item.badge
+      ? isEditing
+        ? pxToRem(150)
+        : pxToRem(95)
+      : isEditing
+        ? pxToRem(60)
+        : pxToRem(15),
+    "--badge-color": backgroundColor,
   } as React.CSSProperties;
   const parsedAmount = Number.parseFloat(tempAmount);
   const displayAmount = Number.isFinite(parsedAmount)
@@ -153,7 +187,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         item.completed ? styles.itemCompleted : ""
       }`}
     >
-
       <Box
         className={`${styles.left} ${
           isEditing ? styles.leftEditing : styles.leftReadonly
@@ -173,6 +206,7 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
               alt=""
               aria-hidden="true"
               className={styles.dragHandleIcon}
+              draggable={false}
             />
           </button>
         )}
@@ -210,7 +244,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-
       <Box className={styles.content}>
         {isEditing && isEditingTitle ? (
           <input
@@ -235,6 +268,9 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
+      {item.badge && (
+        <div className={styles.badge}>{BADGE_LABELS[item.badge]}</div>
+      )}
 
       <Box
         className={`${styles.amountWrap} ${
@@ -266,7 +302,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
           </div>
         )}
       </Box>
-
 
       {isEditing && (
         <Box className={styles.deleteWrap}>

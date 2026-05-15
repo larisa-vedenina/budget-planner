@@ -8,16 +8,13 @@ import { MainPage } from "../pages/MainPage/MainPage";
 export const AppRoutes = () => {
   return (
     <Routes>
-
       <Route path="/" element={<Navigate to="/start" replace />} />
-
 
       <Route path="/start" element={<StartPage />} />
       <Route path="/form" element={<FormPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/archive" element={<ArchivePage />} />
       <Route path="/main" element={<MainPage />} />
-
 
       <Route path="*" element={<Navigate to="/start" replace />} />
     </Routes>

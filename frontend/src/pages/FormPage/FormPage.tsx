@@ -27,10 +27,9 @@ import {
 import { pxToRem, remSpace } from "../../styles/units";
 import { getSurfaceShadowVariable } from "../../styles/theme";
 import { NoteModel } from "../../types/note";
-import { getReturnPath } from "../../utils/navigationState";
+import { createReturnState, getReturnPath } from "../../utils/navigationState";
 import styles from "./FormPage.module.scss";
 
-// Стили кнопок допсекций собраны в helper, чтобы не дублировать press-эффект.
 const getAdditionalButtonSx = (sectionColor: string) => ({
   border: `${pxToRem(3)} solid ${sectionColor}`,
   borderRadius: pxToRem(10),
@@ -60,21 +59,21 @@ const getAdditionalButtonSx = (sectionColor: string) => ({
   textTransform: "uppercase",
 });
 
-// Поле комментария живет отдельно от секций, поэтому держим его стили рядом со страницей.
 const aiCommentSx = {
   "& .MuiOutlinedInput-root": {
-    backgroundColor: "#FFFFFF",
-    borderRadius: pxToRem(5),
-    boxShadow: "none",
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderRadius: "var(--radius-md)",
+    boxShadow: "var(--shadow-surface-red-soft)",
     "& fieldset": {
-      borderColor: "#D9D9D9",
+      borderColor: "var(--surface-red-soft)",
       borderWidth: pxToRem(2),
+      borderRadius: "var(--radius-md)",
     },
     "&:hover fieldset": {
-      borderColor: "#D9D9D9",
+      borderColor: "var(--surface-red-soft)",
     },
     "&.Mui-focused fieldset": {
-      borderColor: "#D9D9D9",
+      borderColor: "var(--surface-red-soft)",
       borderWidth: pxToRem(2),
     },
     "& textarea": {
@@ -94,6 +93,67 @@ const aiCommentSx = {
   },
 };
 
+const contextFieldSx = {
+  "& .MuiOutlinedInput-root": {
+    minHeight: pxToRem(50),
+    height: pxToRem(50),
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderRadius: "var(--radius-md)",
+    boxShadow: "var(--shadow-surface-red-soft)",
+    "& fieldset": {
+      borderColor: "var(--surface-red-soft)",
+      borderWidth: pxToRem(2),
+      borderRadius: "var(--radius-md)",
+    },
+    "&:hover fieldset": {
+      borderColor: "var(--surface-red-soft)",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: "var(--surface-red-soft)",
+      borderWidth: pxToRem(2),
+    },
+    "& input": {
+      color: "#0D0D0D",
+      fontFamily: "'Roboto Condensed', sans-serif",
+      fontSize: pxToRem(16),
+      fontWeight: 400,
+      lineHeight: 1.5,
+      letterSpacing: "0",
+    },
+    "& input::placeholder": {
+      color: "#5B5B5B",
+      fontSize: pxToRem(16),
+      opacity: 0.6,
+    },
+  },
+};
+
+const dailySpendingFieldSx = {
+  ...contextFieldSx,
+  "& .MuiOutlinedInput-root": {
+    ...contextFieldSx["& .MuiOutlinedInput-root"],
+    minHeight: { xs: pxToRem(74), sm: pxToRem(50) },
+    height: { xs: pxToRem(74), sm: pxToRem(50) },
+    alignItems: "center",
+    "& textarea": {
+      color: "#0D0D0D",
+      fontFamily: "'Roboto Condensed', sans-serif",
+      fontSize: pxToRem(16),
+      fontWeight: 400,
+      lineHeight: 1.5,
+      letterSpacing: "0",
+      minHeight: { xs: pxToRem(48), sm: "auto" },
+      overflow: "hidden",
+      resize: "none",
+    },
+    "& textarea::placeholder": {
+      color: "#5B5B5B",
+      fontSize: pxToRem(16),
+      opacity: 0.6,
+    },
+  },
+};
+
 const FormPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,7 +161,6 @@ const FormPage: React.FC = () => {
   const initialDraft = useMemo(loadFormDraft, []);
   const returnPath = getReturnPath(location.state, "/start");
 
-  // История формы нужна для Ctrl+Z и переживает перезагрузку страницы.
   const [formData, setFormData] = useState<FormData>(initialDraft.formData);
   const [history, setHistory] = useState<FormData[]>(initialDraft.history);
   const [historyIndex, setHistoryIndex] = useState(initialDraft.historyIndex);
@@ -115,7 +174,37 @@ const FormPage: React.FC = () => {
     [formData.sections],
   );
 
-  // Сохраняем новый снимок формы и обрезаем redo-ветку.
+  const hasPeriod = Boolean(
+    formData.period.startDate && formData.period.endDate,
+  );
+
+  const hasBudgetInput = useMemo(
+    () =>
+      (formData.sections.income?.inputs.items ?? []).some(
+        (item) => item.amount > 0,
+      ),
+    [formData.sections.income?.inputs.items],
+  );
+
+  const hasRequiredExpenses = useMemo(
+    () =>
+      (formData.sections.required?.inputs.items ?? []).some(
+        (item) => item.text.trim() && item.amount > 0,
+      ),
+    [formData.sections.required?.inputs.items],
+  );
+
+  const isCreateBudgetReady =
+    hasPeriod && hasBudgetInput && hasRequiredExpenses;
+  const canCreateBudget = isCreateBudgetReady && !isSubmitting;
+  const createButtonText = isSubmitting
+    ? "AI создает план..."
+    : !hasBudgetInput || !hasRequiredExpenses
+      ? "введи доход и траты"
+      : !hasPeriod
+        ? "выбери период"
+        : "Создать план бюджета";
+
   const addToHistory = useCallback(
     (newFormData: FormData, action: string) => {
       const newHistory = [...history.slice(0, historyIndex + 1), newFormData];
@@ -125,7 +214,6 @@ const FormPage: React.FC = () => {
     [history, historyIndex],
   );
 
-  // Единая точка изменения формы убирает дублирование в обработчиках.
   const applyFormChange = useCallback(
     (action: string, nextFormData: FormData) => {
       setFormData(nextFormData);
@@ -134,7 +222,6 @@ const FormPage: React.FC = () => {
     [addToHistory],
   );
 
-  // Возвращаем предыдущий снимок формы.
   const undo = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
@@ -143,7 +230,6 @@ const FormPage: React.FC = () => {
     }
   }, [history, historyIndex]);
 
-  // Возвращаем отмененное изменение.
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
@@ -152,15 +238,14 @@ const FormPage: React.FC = () => {
     }
   }, [history, historyIndex]);
 
-  // Поддерживаем привычный undo/redo прямо в форме.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
         if (e.shiftKey) {
-          redo(); // Ctrl+Shift+Z для redo
+          redo();
         } else {
-          undo(); // Ctrl+Z для undo
+          undo();
         }
       }
     };
@@ -169,7 +254,6 @@ const FormPage: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
-  // Автосохраняем черновик и историю формы между перезагрузками.
   useEffect(() => {
     saveFormDraft({
       formData,
@@ -222,6 +306,26 @@ const FormPage: React.FC = () => {
     [formData, applyFormChange],
   );
 
+  const handleCityChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      applyFormChange("Изменение города", {
+        ...formData,
+        city: e.target.value,
+      });
+    },
+    [formData, applyFormChange],
+  );
+
+  const handleDailySpendingChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      applyFormChange("Изменение дневных трат", {
+        ...formData,
+        dailySpending: e.target.value,
+      });
+    },
+    [formData, applyFormChange],
+  );
+
   const handleBack = useCallback(() => {
     navigate(returnPath);
   }, [navigate, returnPath]);
@@ -255,7 +359,8 @@ const FormPage: React.FC = () => {
         return;
       }
 
-      const { [sectionType]: _removedSection, ...newSections } = formData.sections;
+      const { [sectionType]: _removedSection, ...newSections } =
+        formData.sections;
       applyFormChange(`Удаление секции ${sectionType}`, {
         ...formData,
         sections: newSections,
@@ -264,9 +369,8 @@ const FormPage: React.FC = () => {
     [formData, applyFormChange],
   );
 
-  // После создания бюджета черновик больше не нужен.
   const handleCreateBudget = useCallback(async () => {
-    if (isSubmitting) {
+    if (!canCreateBudget) {
       return;
     }
 
@@ -279,7 +383,7 @@ const FormPage: React.FC = () => {
 
       loadBudget(budget);
       clearFormDraft();
-      navigate("/main");
+      navigate("/main", { state: createReturnState(returnPath) });
     } catch (error) {
       console.error("Не удалось сгенерировать AI-план бюджета:", error);
 
@@ -297,14 +401,14 @@ const FormPage: React.FC = () => {
       });
 
       clearFormDraft();
-      navigate("/main");
+      navigate("/main", { state: createReturnState(returnPath) });
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, isSubmitting, loadBudget, navigate]);
+  }, [canCreateBudget, formData, loadBudget, navigate, returnPath]);
 
   return (
-      <Box
+    <Box
       className={styles.page}
       sx={{
         paddingTop: { xs: pxToRem(32), md: pxToRem(40) },
@@ -320,7 +424,6 @@ const FormPage: React.FC = () => {
           paddingX: { xs: 0, sm: 0 },
         }}
       >
-        {/* Основные секции формы всегда видны пользователю. */}
         {MAIN_FORM_SECTIONS.map((sectionId) => {
           const section = formData.sections[sectionId];
 
@@ -334,19 +437,57 @@ const FormPage: React.FC = () => {
           };
 
           return (
-            <BudgetFormSection
-              key={sectionId}
-              section={displaySection}
-              onChange={(items) => handleSectionChange(sectionId, items)}
-              onPeriodChange={
-                sectionId === "period" ? handlePeriodChange : undefined
-              }
-              periodValue={sectionId === "period" ? formData.period : undefined}
-            />
+            <React.Fragment key={sectionId}>
+              <BudgetFormSection
+                section={displaySection}
+                onChange={(items) => handleSectionChange(sectionId, items)}
+                onPeriodChange={
+                  sectionId === "period" ? handlePeriodChange : undefined
+                }
+                periodValue={
+                  sectionId === "period" ? formData.period : undefined
+                }
+              />
+
+              {sectionId === "required" && (
+                <Box className={styles.contextFields}>
+                  <TextField
+                    autoComplete="off"
+                    multiline
+                    minRows={1}
+                    placeholder="Сколько комфортно тратить в день на еду и базовые потребности?"
+                    value={formData.dailySpending}
+                    onChange={handleDailySpendingChange}
+                    className={styles.contextField}
+                    name="budget-daily-spending"
+                    inputProps={{
+                      autoComplete: "off",
+                      autoCapitalize: "off",
+                      spellCheck: false,
+                    }}
+                    sx={dailySpendingFieldSx}
+                  />
+
+                  <TextField
+                    autoComplete="off"
+                    placeholder="В каком городе живешь?"
+                    value={formData.city}
+                    onChange={handleCityChange}
+                    className={styles.contextField}
+                    name="budget-city"
+                    inputProps={{
+                      autoComplete: "off",
+                      autoCapitalize: "off",
+                      spellCheck: false,
+                    }}
+                    sx={contextFieldSx}
+                  />
+                </Box>
+              )}
+            </React.Fragment>
           );
         })}
 
-        {/* Дополнительные секции подключаются по кнопке. */}
         <Box className={styles.sectionBlock} sx={{ marginBottom: pxToRem(10) }}>
           <Box className={styles.additionalActions}>
             {ADDITIONAL_FORM_SECTIONS.map((sectionType) => {
@@ -373,7 +514,6 @@ const FormPage: React.FC = () => {
             })}
           </Box>
 
-          {/* Рендерим только реально подключенные дополнительные секции. */}
           {additionalSections.map((sectionType) => {
             const section = formData.sections[sectionType];
 
@@ -396,7 +536,6 @@ const FormPage: React.FC = () => {
           })}
         </Box>
 
-        {/* Свободный комментарий помогает дополнить план контекстом. */}
         <Box className={styles.aiSection} sx={{ marginBottom: pxToRem(10) }}>
           <TextField
             fullWidth
@@ -416,24 +555,29 @@ const FormPage: React.FC = () => {
           />
         </Box>
 
-        {/* Кнопка создания бюджета */}
         <Box className={styles.createRow}>
           <Button
             disableRipple
             onClick={handleCreateBudget}
-            disabled={isSubmitting}
+            disabled={!canCreateBudget}
             className={styles.createButton}
             sx={{
               width: "100%",
               maxWidth: pxToRem(342),
               minHeight: pxToRem(63),
               backgroundColor: "#FFFFFF",
-              border: `${pxToRem(3)} solid #D87B7B`,
+              border: `${pxToRem(3)} solid ${
+                isCreateBudgetReady ? "#D87B7B" : "var(--border-neutral)"
+              }`,
               borderRadius: pxToRem(10),
-              boxShadow: "var(--shadow-accent-red)",
-              color: "#0D0D0D",
+              boxShadow: isCreateBudgetReady
+                ? "var(--shadow-accent-red)"
+                : "var(--shadow-neutral-edit)",
+              color: isCreateBudgetReady ? "#0D0D0D" : "#5B5B5B",
               fontFamily: "'Roboto Condensed', sans-serif",
-              fontSize: { xs: pxToRem(20), sm: pxToRem(24) },
+              fontSize: isCreateBudgetReady
+                ? { xs: pxToRem(20), sm: pxToRem(24) }
+                : pxToRem(16),
               fontWeight: 400,
               lineHeight: pxToRem(28),
               textTransform: "uppercase",
@@ -453,17 +597,20 @@ const FormPage: React.FC = () => {
               },
               "&.Mui-disabled": {
                 backgroundColor: "#FFFFFF",
-                color: "#0D0D0D",
-                opacity: 0.7,
-                borderColor: "#D87B7B",
-                boxShadow: "var(--shadow-accent-red)",
+                color: isCreateBudgetReady ? "#0D0D0D" : "#5B5B5B",
+                opacity: 1,
+                borderColor: isCreateBudgetReady
+                  ? "#D87B7B"
+                  : "var(--border-neutral)",
+                boxShadow: isCreateBudgetReady
+                  ? "var(--shadow-accent-red)"
+                  : "var(--shadow-neutral-edit)",
               },
             }}
           >
-            {isSubmitting ? "AI создает план..." : "Создать план бюджета"}
+            {createButtonText}
           </Button>
         </Box>
-
       </Container>
 
       <div className={styles.pageFooter}>
@@ -483,9 +630,10 @@ const FormPage: React.FC = () => {
           iconFileName="tooltip_form.png"
           floating={false}
           messages={[
-            "Последнее изменение можно отменить через Ctrl+Z.",
-            "Чтобы добавить пункт, просто нажми Enter.",
-            "В комментарии лучше написать побольше деталей — так план получится точнее.",
+            "㋡ Заполняй подробно: суммы, сроки, долги, цели и важные ограничения.",
+            "㋡ Чтобы сохранить пункт, нажми Enter.",
+            "㋡ Последнее действие можно отменить через Ctrl+Z.",
+            "㋡ После создания бюджета все пункты и заметки можно редактировать.",
           ]}
         />
       </div>

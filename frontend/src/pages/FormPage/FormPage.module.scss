@@ -1,6 +1,5 @@
 @use "../../styles/functions" as *;
 
-
 .page {
   min-height: 100vh;
   padding: rem(32) rem(12);
@@ -68,7 +67,6 @@
   margin-bottom: rem(20);
 }
 
-
 .additionalActions {
   display: flex;
   flex-wrap: wrap;
@@ -80,10 +78,20 @@
   min-width: rem(192);
 }
 
+.contextFields {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  gap: rem(10);
+  margin-bottom: rem(10);
+}
+
+.contextField {
+  min-width: 0;
+}
+
 .aiSection {
   margin-bottom: rem(20);
 }
-
 
 .createRow {
   display: flex;
@@ -109,6 +117,10 @@
 
   .additionalButton {
     width: 100%;
+  }
+
+  .contextFields {
+    grid-template-columns: 1fr;
   }
 }
 

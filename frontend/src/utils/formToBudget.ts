@@ -7,6 +7,9 @@ import {
   FormInputItem,
   SectionType,
 } from "../types/form";
+import { createAIRefreshSignature, createBudgetAIContext } from "./budgetAI";
+
+const GOAL_RESERVE_SHARE = 0.3;
 
 export const parseDateInput = (value: string): Date | null => {
   if (!value) {
@@ -36,6 +39,59 @@ const buildChecklistItems = (
       ),
   );
 
+const formatContextItemTitle = (item: FormInputItem): string =>
+  item.text.trim() || "Без названия";
+
+const buildDebtItems = (items: FormInputItem[] = []): ChecklistItemModel[] =>
+  items.map(
+    (item, index) =>
+      new ChecklistItemModel(
+        item.id,
+        formatContextItemTitle(item),
+        Math.max(0, item.amount || 0),
+        false,
+        "required",
+        "default",
+        undefined,
+        "idle",
+        new Date(Date.now() + index),
+        "debt",
+      ),
+  );
+
+const buildGoalItems = (
+  items: FormInputItem[] = [],
+  availableMoney: number,
+): ChecklistItemModel[] => {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const goalReserve = Math.max(0, Math.round(availableMoney * GOAL_RESERVE_SHARE));
+  const equalGoalShare = items.length > 0 ? Math.round(goalReserve / items.length) : 0;
+
+  return items.map((item, index) => {
+    const targetAmount = Math.max(0, item.amount || 0);
+    const contributionAmount =
+      targetAmount > 0
+        ? Math.min(targetAmount, equalGoalShare)
+        : equalGoalShare;
+
+    return new ChecklistItemModel(
+      item.id,
+      formatContextItemTitle(item),
+      contributionAmount,
+      false,
+      "desired",
+      "default",
+      undefined,
+      "idle",
+      new Date(Date.now() + index),
+      "goal",
+    );
+  });
+};
+
 export const buildAdditionalInfoNotes = (formData: FormData): NoteModel[] => {
   const notes: NoteModel[] = [];
 
@@ -50,6 +106,10 @@ export const buildAdditionalInfoNotes = (formData: FormData): NoteModel[] => {
   }
 
   ADDITIONAL_FORM_SECTIONS.forEach((sectionType: SectionType) => {
+    if (sectionType !== "assets") {
+      return;
+    }
+
     const section = formData.sections[sectionType];
     if (!section) {
       return;
@@ -103,25 +163,36 @@ export const formDataToBudget = (formData: FormData): BudgetPeriod => {
   const endDate = parseDateInput(formData.period.endDate) ?? budget.endDate;
 
   const incomeItems = formData.sections.income?.inputs.items ?? [];
-  const requiredItems = buildChecklistItems(
-    formData.sections.required?.inputs.items,
+  const baseRequiredItems = buildChecklistItems(
+    formData.sections.required?.inputs.items ?? [],
     "required",
   );
-  const desiredItems = buildChecklistItems(
-    formData.sections.desired?.inputs.items,
+  const baseDesiredItems = buildChecklistItems(
+    formData.sections.desired?.inputs.items ?? [],
     "desired",
   );
+  const debtItems = buildDebtItems(formData.sections.debts?.inputs.items ?? []);
 
   const totalIncome = incomeItems.reduce(
     (sum, item) => sum + Math.max(0, item.amount || 0),
     0,
   );
+  const committedExpenses = [...baseRequiredItems, ...baseDesiredItems, ...debtItems].reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
+  const goalItems = buildGoalItems(
+    formData.sections.goals?.inputs.items ?? [],
+    totalIncome - committedExpenses,
+  );
+  const requiredItems = [...baseRequiredItems, ...debtItems];
+  const desiredItems = [...baseDesiredItems, ...goalItems];
   const totalExpenses = [...requiredItems, ...desiredItems].reduce(
     (sum, item) => sum + item.amount,
     0,
   );
 
-  return {
+  const nextBudget: BudgetPeriod = {
     ...budget,
     title: createBudgetTitle(startDate, endDate),
     startDate,
@@ -132,6 +203,12 @@ export const formDataToBudget = (formData: FormData): BudgetPeriod => {
     requiredItems,
     desiredItems,
     notes: buildAdditionalInfoNotes(formData),
+    aiContext: createBudgetAIContext(formData),
     updatedAt: new Date(),
+  };
+
+  return {
+    ...nextBudget,
+    aiPlanSignature: createAIRefreshSignature(nextBudget),
   };
 };

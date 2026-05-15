@@ -13,6 +13,8 @@ export const formDataToAIBudgetPlanRequest = (
     startDate: formData.period.startDate,
     endDate: formData.period.endDate,
   },
+  city: formData.city.trim(),
+  dailySpending: formData.dailySpending.trim(),
   aiComment: formData.aiComment.trim(),
   sections: {
     income: getSectionItems(formData, "income"),

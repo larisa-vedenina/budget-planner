@@ -4,6 +4,10 @@ import { ChecklistItemModel } from "../types/checklist-item";
 import { NoteModel } from "../types/note";
 import { FormData } from "../types/form";
 import {
+  createAIRefreshSignature,
+  createBudgetAIContext,
+} from "./budgetAI";
+import {
   buildAdditionalInfoNotes,
   createBudgetTitle,
   parseDateInput,
@@ -41,10 +45,16 @@ const createChecklistItemsFromAI = (
         false,
         category,
         item.priority ? "priority" : "default",
+        undefined,
+        "idle",
+        new Date(),
+        item.badge,
       ),
   );
 
-const buildAINotes = (aiPlan: AIBudgetPlanResponse): NoteModel[] => {
+export const buildAINotesFromPlan = (
+  aiPlan: AIBudgetPlanResponse,
+): NoteModel[] => {
   const rawNotes = [
     aiPlan.summary,
     ...aiPlan.notes,
@@ -87,7 +97,7 @@ export const aiBudgetPlanToBudget = (
     0,
   );
 
-  return {
+  const nextBudget: BudgetPeriod = {
     ...draftBudget,
     title: createBudgetTitle(startDate, endDate),
     startDate,
@@ -97,7 +107,16 @@ export const aiBudgetPlanToBudget = (
     remaining: totalIncome,
     requiredItems,
     desiredItems,
-    notes: [...buildAINotes(aiPlan), ...buildAdditionalInfoNotes(formData)],
+    notes: [
+      ...buildAINotesFromPlan(aiPlan),
+      ...buildAdditionalInfoNotes(formData),
+    ],
+    aiContext: createBudgetAIContext(formData),
     updatedAt: new Date(),
+  };
+
+  return {
+    ...nextBudget,
+    aiPlanSignature: createAIRefreshSignature(nextBudget),
   };
 };

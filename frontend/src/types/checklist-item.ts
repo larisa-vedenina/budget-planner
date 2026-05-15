@@ -1,8 +1,7 @@
-
-
 export type ChecklistCategory = "required" | "desired";
 export type PriorityColor = "default" | "priority";
 export type DragState = "idle" | "dragging" | "hover";
+export type ChecklistItemBadge = "debt" | "goal" | "asset";
 
 export interface IChecklistItem {
   id: string;
@@ -14,8 +13,8 @@ export interface IChecklistItem {
   completedAt?: Date;
   dragState?: DragState;
   createdAt: Date;
+  badge?: ChecklistItemBadge;
 }
-
 
 export class ChecklistItemModel implements IChecklistItem {
   constructor(
@@ -27,9 +26,9 @@ export class ChecklistItemModel implements IChecklistItem {
     public priority: PriorityColor = "default",
     public completedAt?: Date,
     public dragState: DragState = "idle",
-    public createdAt: Date = new Date()
+    public createdAt: Date = new Date(),
+    public badge?: ChecklistItemBadge,
   ) {}
-
 
   static createDefault(category: ChecklistCategory): ChecklistItemModel {
     return new ChecklistItemModel(
@@ -41,10 +40,9 @@ export class ChecklistItemModel implements IChecklistItem {
       "default",
       undefined,
       "idle",
-      new Date()
+      new Date(),
     );
   }
-
 
   updateTitle(newTitle: string): ChecklistItemModel {
     return new ChecklistItemModel(
@@ -56,41 +54,42 @@ export class ChecklistItemModel implements IChecklistItem {
       this.priority,
       this.completedAt,
       this.dragState,
-      this.createdAt
+      this.createdAt,
+      this.badge,
     );
   }
 
-
   updateAmount(newAmount: number): ChecklistItemModel {
-    const validatedAmount = Math.max(0, newAmount);
     return new ChecklistItemModel(
       this.id,
       this.title,
-      validatedAmount,
+      Math.max(0, newAmount),
       this.completed,
       this.category,
       this.priority,
       this.completedAt,
       this.dragState,
-      this.createdAt
+      this.createdAt,
+      this.badge,
     );
   }
 
-
   toggleCompleted(): ChecklistItemModel {
+    const nextCompleted = !this.completed;
+
     return new ChecklistItemModel(
       this.id,
       this.title,
       this.amount,
-      !this.completed,
+      nextCompleted,
       this.category,
       this.priority,
-      !this.completed ? new Date() : undefined,
+      nextCompleted ? new Date() : undefined,
       this.dragState,
-      this.createdAt
+      this.createdAt,
+      this.badge,
     );
   }
-
 
   togglePriority(): ChecklistItemModel {
     return new ChecklistItemModel(
@@ -102,60 +101,8 @@ export class ChecklistItemModel implements IChecklistItem {
       this.priority === "priority" ? "default" : "priority",
       this.completedAt,
       this.dragState,
-      this.createdAt
+      this.createdAt,
+      this.badge,
     );
-  }
-
-
-  updateDragState(newState: DragState): ChecklistItemModel {
-    return new ChecklistItemModel(
-      this.id,
-      this.title,
-      this.amount,
-      this.completed,
-      this.category,
-      this.priority,
-      this.completedAt,
-      newState,
-      this.createdAt
-    );
-  }
-
-
-  getStyles(): {
-    border: string;
-    boxShadow: string;
-    transform: string;
-    cursor: string;
-  } {
-    const styles = {
-      border: "",
-      boxShadow: "none",
-      transform: "translate(0px, 0px)",
-      cursor: "pointer",
-    };
-    if (this.priority === "priority") {
-      styles.border = "2px solid #D87B7B";
-    } else {
-      styles.border = "2px solid #FFFFFF";
-    }
-    if (this.dragState === "hover" || this.dragState === "dragging") {
-      styles.boxShadow = "-2px 2px 1px rgba(0, 0, 0, 0.25)";
-      styles.transform = "translate(-1px, 1px)";
-    }
-    if (this.dragState === "dragging") {
-      styles.cursor = "grabbing";
-    } else if (this.dragState === "hover") {
-      styles.cursor = "grab";
-    }
-
-    return styles;
-  }
-
-
-  getSortOrder(): number {
-    return this.priority === "priority"
-      ? 1
-      : 0 + 1 / (this.createdAt.getTime() || 1);
   }
 }

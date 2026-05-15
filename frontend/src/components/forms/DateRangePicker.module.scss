@@ -1,13 +1,11 @@
 @use "../../styles/functions" as *;
 
-/* Контейнер поля периода и выпадающего календаря. */
 .pickerWrap {
   display: flex;
   flex-direction: column;
   gap: rem(12);
 }
 
-/* Триггер открывает popover. */
 .trigger {
   min-height: rem(50);
   height: rem(50);

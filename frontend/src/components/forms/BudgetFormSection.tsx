@@ -8,6 +8,7 @@ import {
 } from "../../types/form";
 import { pxToRem } from "../../styles/units";
 import { getSurfaceShadowVariable } from "../../styles/theme";
+import { publicImageSrc } from "../../utils/publicImageSrc";
 import styles from "./BudgetFormSection.module.scss";
 
 interface BudgetFormSectionProps {
@@ -25,10 +26,13 @@ interface BudgetFormSectionProps {
 const DESKTOP_TEXT_WIDTH = pxToRem(200);
 const DESKTOP_AMOUNT_WIDTH = pxToRem(120);
 const DESKTOP_COMMENT_WIDTH = pxToRem(180);
+const ADD_ITEM_ICON_SRC = publicImageSrc("like.webp");
+
 const parseAmountValue = (value: string | undefined): number => {
   const parsedValue = Number.parseFloat(value ?? "");
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 };
+
 const getSectionInputSx = (index: number) => ({
   flexGrow: index === 2 ? 1 : 0,
   flexShrink: 1,
@@ -38,7 +42,7 @@ const getSectionInputSx = (index: number) => ({
         ? "calc(100% - 8.125rem)"
         : index === 1
           ? DESKTOP_AMOUNT_WIDTH
-          : "100%",
+          : "calc(100% - 3.75rem)",
     sm:
       index === 0
         ? DESKTOP_TEXT_WIDTH
@@ -51,11 +55,12 @@ const getSectionInputSx = (index: number) => ({
     minHeight: pxToRem(50),
     height: pxToRem(50),
     backgroundColor: "#FFFFFF",
-    borderRadius: pxToRem(5),
+    borderRadius: pxToRem(8),
     boxShadow: "none",
     "& fieldset": {
       borderColor: "#D9D9D9",
       borderWidth: pxToRem(2),
+      borderRadius: pxToRem(8),
     },
     "&:hover fieldset": {
       borderColor: "#D9D9D9",
@@ -94,6 +99,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
   );
   const [inputValues, setInputValues] = useState<string[]>(emptyInputValues);
   const [isEnterHintVisible, setIsEnterHintVisible] = useState(false);
+  const canAddInputItem = Boolean(inputValues[0]?.trim());
 
   useEffect(() => {
     setInputValues(emptyInputValues);
@@ -104,6 +110,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       setIsEnterHintVisible(false);
     }
   }, [section.inputs.items.length]);
+
   const handleInputChange = useCallback((index: number, value: string) => {
     setInputValues((prev) => {
       const newValues = [...prev];
@@ -111,11 +118,13 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       return newValues;
     });
   }, []);
+
   const handleInputFocus = useCallback(() => {
     if (section.inputs.items.length === 0) {
       setIsEnterHintVisible(true);
     }
   }, [section.inputs.items.length]);
+
   const focusFirstInput = useCallback(() => {
     setTimeout(() => {
       const inputs = document.querySelectorAll(
@@ -126,6 +135,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       }
     }, 10);
   }, [section.id]);
+
   const createFormItem = useCallback(
     (): FormInputItemType => ({
       id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
@@ -135,25 +145,35 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     }),
     [inputValues],
   );
+
+  const handleAddInputItem = useCallback(() => {
+    if (!canAddInputItem) {
+      return;
+    }
+
+    onChange([...section.inputs.items, createFormItem()]);
+    setInputValues(section.inputs.placeholders.map(() => ""));
+    setIsEnterHintVisible(false);
+    focusFirstInput();
+  }, [
+    canAddInputItem,
+    createFormItem,
+    focusFirstInput,
+    section.inputs.items,
+    section.inputs.placeholders,
+    onChange,
+  ]);
+
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && inputValues[0]?.trim()) {
+      if (e.key === "Enter") {
         e.preventDefault();
-        onChange([...section.inputs.items, createFormItem()]);
-        setInputValues(section.inputs.placeholders.map(() => ""));
-        setIsEnterHintVisible(false);
-        focusFirstInput();
+        handleAddInputItem();
       }
     },
-    [
-      createFormItem,
-      focusFirstInput,
-      inputValues,
-      section.inputs.items,
-      section.inputs.placeholders,
-      onChange,
-    ],
+    [handleAddInputItem],
   );
+
   const handleRemoveItem = useCallback(
     (itemId: string) => {
       const updatedItems = section.inputs.items.filter(
@@ -163,6 +183,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     },
     [section.inputs.items, onChange],
   );
+
   const handleUpdateItem = useCallback(
     (itemId: string, updates: Partial<FormInputItemType>) => {
       const updatedItems = section.inputs.items.map((item) =>
@@ -172,6 +193,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
     },
     [section.inputs.items, onChange],
   );
+
   if (section.id === "period") {
     return (
       <Box
@@ -197,6 +219,7 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
       </Box>
     );
   }
+
   return (
     <Box
       className={`${styles.section} ${isNested ? styles.nested : ""}`}
@@ -248,6 +271,21 @@ const BudgetFormSection: React.FC<BudgetFormSectionProps> = ({
             sx={getSectionInputSx(index)}
           />
         ))}
+
+        <button
+          type="button"
+          className={styles.mobileAddButton}
+          onClick={handleAddInputItem}
+          disabled={!canAddInputItem}
+          aria-label={`Сохранить пункт в секции ${section.title}`}
+        >
+          <img
+            src={ADD_ITEM_ICON_SRC}
+            alt=""
+            aria-hidden="true"
+            className={styles.mobileAddButtonIcon}
+          />
+        </button>
       </Box>
 
       {isEnterHintVisible && section.inputs.items.length === 0 && (

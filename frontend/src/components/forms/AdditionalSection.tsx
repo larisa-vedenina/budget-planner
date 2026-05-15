@@ -9,6 +9,7 @@ interface AdditionalSectionProps {
   section: FormSection;
   onChange: (items: FormInputItem[]) => void;
 }
+
 const AdditionalSection: React.FC<AdditionalSectionProps> = ({
   section,
   onChange,
