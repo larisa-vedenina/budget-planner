@@ -126,14 +126,18 @@
   min-height: rem(65);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   background: var(--color-white);
-  color: var(--color-text-primary);
+  color: var(--budget-card-bg, var(--color-text-primary));
   border: rem(2) solid transparent;
   border-radius: var(--radius-md);
   padding: rem(12) rem(15);
   margin: 0 auto rem(10);
-  font-size: rem(24);
+  font-size: rem(16);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: uppercase;
   cursor: pointer;
   position: relative;
   box-sizing: border-box;
@@ -153,14 +157,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.addButtonIcon {
-  width: rem(34);
-  height: rem(34);
-  display: block;
-  object-fit: contain;
-  pointer-events: none;
+  min-width: 0;
 }
 
 .emptyMessage {
@@ -305,13 +302,8 @@
     height: rem(50);
     min-height: rem(50);
     padding: rem(10) rem(12);
-    font-size: rem(18);
+    font-size: rem(16);
     margin: 0 0 rem(10);
-  }
-
-  .addButtonIcon {
-    width: rem(20);
-    height: rem(20);
   }
 
   .activeItemsWrap {

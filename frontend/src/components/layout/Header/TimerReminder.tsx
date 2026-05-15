@@ -1,4 +1,3 @@
-// components/layout/Header/TimerReminder.tsx
 import React, { useState, useEffect } from 'react';
 import styles from "./TimerReminder.module.scss";
 
@@ -20,28 +19,23 @@ export const TimerReminder: React.FC<TimerReminderProps> = ({
       const start = new Date(startDate);
       const end = new Date(endDate);
       
-      // Проверяем, начался ли период
       if (now < start) {
         setShowReminder(false);
         setReminderText('');
         return;
       }
 
-      // Проверяем, закончился ли период
       if (now > end) {
         setShowReminder(true);
         setReminderText('Период завершен');
         return;
       }
 
-      // Рассчитываем оставшееся время
       const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Показываем напоминание только когда осталось 7 дней или меньше
       if (daysLeft <= 7) {
         setShowReminder(true);
         
-        // Определяем текст напоминания
         let message = '';
         if (daysLeft === 7) {
           message = 'Осталась неделя';
@@ -60,23 +54,18 @@ export const TimerReminder: React.FC<TimerReminderProps> = ({
         
         setReminderText(message);
       } else {
-        // Не показываем напоминание если больше 7 дней
         setShowReminder(false);
         setReminderText('');
       }
     };
 
-    // Первый расчет
     calculateReminder();
 
-    // Обновляем каждую минуту
     const intervalId = setInterval(calculateReminder, 60000);
 
-    // Очистка интервала при размонтировании
     return () => clearInterval(intervalId);
   }, [startDate, endDate]);
 
-  // Форматируем даты для отображения периода (только числа и месяца)
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('ru-RU', {
       day: 'numeric',
@@ -84,25 +73,58 @@ export const TimerReminder: React.FC<TimerReminderProps> = ({
     });
   };
 
-  // Получаем правильный цвет для текста напоминания
+  const getPeriodDays = (): number => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end < start
+    ) {
+      return 0;
+    }
+
+    return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  const formatDays = (days: number): string => {
+    const normalizedDays = Math.max(1, days);
+    const lastTwoDigits = normalizedDays % 100;
+    const lastDigit = normalizedDays % 10;
+
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+      return `${normalizedDays} дней`;
+    }
+
+    if (lastDigit === 1) {
+      return `${normalizedDays} день`;
+    }
+
+    if (lastDigit >= 2 && lastDigit <= 4) {
+      return `${normalizedDays} дня`;
+    }
+
+    return `${normalizedDays} дней`;
+  };
+
   const getReminderColor = (): string => {
     if (reminderText.includes('Период завершен')) {
-      return '#5B5B5B'; // Красный для завершенного периода
+      return '#5B5B5B';
     }
     if (reminderText.includes('последний день')) {
-      return '#D87B7B'; // Красный для последнего дня
+      return '#D87B7B';
     }
-    return '#D87B7B'; // Красный для всех напоминаний 
+    return '#D87B7B';
   };
 
   return (
     <div className={styles.root}>
-      {/* Основной период - всегда отображается */}
       <div className={styles.periodText}>
         {formatDate(new Date(startDate))} – {formatDate(new Date(endDate))}
       </div>
+      <div className={styles.periodDaysText}>{formatDays(getPeriodDays())}</div>
 
-      {/* Напоминание - появляется только когда осталось ≤ 7 дней */}
       {showReminder && (
         <div
           className={styles.reminderText}

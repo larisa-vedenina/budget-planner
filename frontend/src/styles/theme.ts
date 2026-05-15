@@ -299,7 +299,6 @@ export const cssVariables: Record<string, string> = {
   "--radius-pill": radiusTokens.pill,
   "--transition-fast": motion.fast,
 
-  // Backward-compatible aliases for existing styles
   "--color-white": surfaceColors.white,
   "--color-surface-muted": surfaceColors.white,
   "--color-surface-soft-blue": accentColors.blue.soft,

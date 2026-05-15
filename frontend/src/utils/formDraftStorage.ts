@@ -16,7 +16,6 @@ export interface StoredFormDraft {
   historyIndex: number;
 }
 
-// Нормализуем секцию через дефолты, чтобы структура не ломалась после обновлений схемы.
 const normalizeSection = (
   sectionType: SectionType,
   section?: Partial<FormSection>,
@@ -30,7 +29,6 @@ const normalizeSection = (
   },
 });
 
-// Собираем стартовое состояние формы из дефолтов и сохраненного черновика.
 export const createEmptyFormData = (storedData?: Partial<FormData>): FormData => {
   const sections = MAIN_FORM_SECTIONS.reduce(
     (acc, sectionType) => ({
@@ -55,6 +53,8 @@ export const createEmptyFormData = (storedData?: Partial<FormData>): FormData =>
       startDate: storedData?.period?.startDate ?? "",
       endDate: storedData?.period?.endDate ?? "",
     },
+    city: storedData?.city ?? "",
+    dailySpending: storedData?.dailySpending ?? "",
     sections,
     aiComment: storedData?.aiComment ?? "",
   };
@@ -70,7 +70,6 @@ const createEmptyDraft = (): StoredFormDraft => {
   };
 };
 
-// Восстанавливаем черновик и аккуратно приводим его к актуальной схеме формы.
 export const loadFormDraft = (): StoredFormDraft => {
   const emptyDraft = createEmptyDraft();
 
@@ -107,7 +106,6 @@ export const loadFormDraft = (): StoredFormDraft => {
   };
 };
 
-// Сохраняем и саму форму, и историю, чтобы после перезагрузки работал undo.
 export const saveFormDraft = (draft: StoredFormDraft): void => {
   if (!StorageService.isSupported()) {
     return;

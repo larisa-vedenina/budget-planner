@@ -1,73 +1,11 @@
-// Типы для API-запросов
-
 import { FormInputItem } from "./form";
 import { User } from "./user";
 
-/**
- * Базовый интерфейс для API-ответов
- */
 export interface ApiResponse<T> {
-  data: T; // Полезные данные
-  success: boolean; // Успешность операции
-  message?: string; // Сообщение (опционально)
-  timestamp: string; // Время ответа
-}
-
-/**
- * Интерфейс для ошибок API
- */
-export interface ApiError {
-  code: string; // Код ошибки
-  message: string;   // Сообщение об ошибке
-  details?: any;     // Детали ошибки (опционально)
-}
-
-/**
- * Запрос на создание бюджета
- */
-export interface CreateBudgetRequest {
-  period: {
-    startDate: Date;
-    endDate: Date;
-  };
-  incomes: Array<{
-    source: string;
-    amount: number;
-    expectedDate?: Date;
-  }>;
-  requiredExpenses: Array<{
-    title: string;
-    amount: number;
-    paymentDate?: string;
-  }>;
-  desiredExpenses: Array<{
-    title: string;
-    amount: number;
-    paymentDate?: string;
-  }>;
-  commentForAI?: string; // Комментарий для генерации AI-советов
-}
-
-/**
- * Запрос на обновление цветов ячеек
- */
-export interface UpdateColorsRequest {
-  budgetId: string;
-  colors: {
-    required: string;
-    desired: string;
-    notes: string;
-  };
-}
-
-/**
- * Запрос на перемещение пункта между категориями
- */
-export interface MoveItemRequest {
-  itemId: string;
-  fromCategory: 'required' | 'desired';
-  toCategory: 'required' | 'desired';
-  newPosition: number;
+  data: T;
+  success: boolean;
+  message?: string;
+  timestamp: string;
 }
 
 export interface AIBudgetPlanRequest {
@@ -75,6 +13,8 @@ export interface AIBudgetPlanRequest {
     startDate: string;
     endDate: string;
   };
+  city: string;
+  dailySpending: string;
   aiComment: string;
   sections: {
     income: FormInputItem[];
@@ -90,6 +30,7 @@ export interface AIBudgetPlanItem {
   title: string;
   amount: number;
   priority: boolean;
+  badge?: "debt" | "goal" | "asset";
 }
 
 export interface AIBudgetPlanResponse {

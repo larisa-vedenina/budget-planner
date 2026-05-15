@@ -1,5 +1,8 @@
 import { BudgetPeriod } from "../types/budget";
-import { ChecklistItemModel } from "../types/checklist-item";
+import {
+  ChecklistItemBadge,
+  ChecklistItemModel,
+} from "../types/checklist-item";
 import { NoteModel } from "../types/note";
 
 interface SerializedChecklistItem {
@@ -12,6 +15,7 @@ interface SerializedChecklistItem {
   completedAt?: string;
   dragState?: "idle" | "dragging" | "hover";
   createdAt: string;
+  badge?: ChecklistItemBadge;
 }
 
 interface SerializedNote {
@@ -84,6 +88,7 @@ export const serializeBudget = (
     completedAt: item.completedAt?.toISOString(),
     dragState: item.dragState,
     createdAt: item.createdAt.toISOString(),
+    badge: item.badge,
   })),
   desiredItems: budget.desiredItems.map((item) => ({
     id: item.id,
@@ -95,6 +100,7 @@ export const serializeBudget = (
     completedAt: item.completedAt?.toISOString(),
     dragState: item.dragState,
     createdAt: item.createdAt.toISOString(),
+    badge: item.badge,
   })),
   notes: budget.notes.map((note) => ({
     id: note.id,
@@ -125,6 +131,7 @@ export const deserializeBudget = (
             item.completedAt ? new Date(item.completedAt) : undefined,
             item.dragState || "idle",
             new Date(item.createdAt),
+            item.badge,
           ),
       )
     : [],
@@ -141,6 +148,7 @@ export const deserializeBudget = (
             item.completedAt ? new Date(item.completedAt) : undefined,
             item.dragState || "idle",
             new Date(item.createdAt),
+            item.badge,
           ),
       )
     : [],

@@ -18,7 +18,6 @@ import styles from "./ArchivePage.module.scss";
 const trashArchiveIconSrc = publicImageSrc("trash_archive.png");
 const trashArchiveOpenIconSrc = publicImageSrc("trash_archive_open.png");
 
-// Получаем дату в формате "1 ноября" с правильным падежом месяца.
 const formatDayAndMonth = (date: Date): string =>
   date.toLocaleDateString("ru-RU", {
     day: "numeric",
@@ -90,7 +89,7 @@ export const ArchivePage = () => {
   const handleOpenBudget = useCallback(
     (budget: BudgetPeriod) => {
       loadBudget(budget);
-      navigate("/main");
+      navigate("/main", { state: createReturnState("/archive") });
     },
     [loadBudget, navigate],
   );
@@ -261,7 +260,7 @@ export const ArchivePage = () => {
           ariaLabel="Информация об отмене удаления"
           variant="green"
           iconFileName="tooltip_archive.png"
-          messages={["Отменить удаление можно сочетанием Ctrl+Z."]}
+          messages={["㋡ Отменить удаление можно сочетанием Ctrl+Z."]}
           autoVisible={isUndoInfoAutoVisible}
           floating={false}
         />

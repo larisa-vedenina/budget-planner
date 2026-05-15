@@ -12,7 +12,6 @@ interface InfoHintProps {
   className?: string;
 }
 
-// Общая информационная подсказка для страниц с короткими инструкциями.
 const InfoHint: React.FC<InfoHintProps> = ({
   messages,
   ariaLabel,

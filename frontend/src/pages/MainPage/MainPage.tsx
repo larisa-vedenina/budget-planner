@@ -1,10 +1,10 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useBudget } from "../../contexts/BudgetContext";
 import { ChecklistItemModel } from "../../types/checklist-item";
 import { NoteModel } from "../../types/note";
 import { CellColor } from "../../types/budget";
-import { createReturnState } from "../../utils/navigationState";
+import { createReturnState, getReturnPath } from "../../utils/navigationState";
 import Header from "../../components/layout/Header/Header";
 import BudgetGrid from "../../components/layout/BudgetGrid/BudgetGrid";
 import InfoHint from "../../components/ui/InfoHint";
@@ -13,6 +13,8 @@ import styles from "./MainPage.module.scss";
 
 export const MainPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnPath = getReturnPath(location.state, "/archive");
   const {
     currentBudget,
     isEditMode,
@@ -30,7 +32,6 @@ export const MainPage: React.FC = () => {
     reorderItems,
     moveItemBetweenCategories,
   } = useBudget();
-  // Вспомогательные обработчики (если нужны)
   const handleItemUpdate = (
     item: ChecklistItemModel,
     category: "required" | "desired",
@@ -84,7 +85,10 @@ export const MainPage: React.FC = () => {
     moveItemBetweenCategories(itemId, fromCategory, toCategory);
   };
 
-  // Функция для сброса данных
+  const handleBack = () => {
+    navigate(returnPath === "/main" ? "/archive" : returnPath);
+  };
+
   const handleResetData = () => {
     if (
       window.confirm(
@@ -151,11 +155,26 @@ export const MainPage: React.FC = () => {
 
       <InfoHint
         className={styles.pageHint}
-        ariaLabel="Подсказка по отмене действий"
+        ariaLabel="Подсказка по редактированию бюджета"
         variant="gray"
         iconFileName="tooltip_main.png"
-        messages={["Последнее действие в режиме редактирования можно отменить через Ctrl+Z."]}
+        messages={[
+          "㋡ Последнее действие можно отменить через Ctrl+Z.",
+          "㋡ Связанные суммы и лимиты пересчитываются автоматически.",
+          "㋡ Обновляй план с ИИ, когда меняется логика бюджета: доход, обязательные траты или длительность периода.",
+          "㋡ ИИ обновляет рекомендации, а твои ручные заметки остаются на месте.",
+        ]}
       />
+
+      <div className={styles.pageFooter}>
+        <button
+          type="button"
+          className={styles.backButton}
+          onClick={handleBack}
+        >
+          Вернуться
+        </button>
+      </div>
     </div>
   );
 };

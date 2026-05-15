@@ -44,9 +44,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  // border-radius: rem(10);
-  // background: rgba(255, 255, 255, 0.92);
-  // box-shadow: var(--hint-shadow);
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -73,7 +70,6 @@
   width: max-content;
   max-width: min(calc(100vw - rem(32)), rem(320));
   padding: rem(10) rem(14);
-  // border: rem(2) solid var(--hint-border);
   border-radius: var(--radius-md);
   background: var(--color-white);
   box-shadow: var(--hint-shadow);

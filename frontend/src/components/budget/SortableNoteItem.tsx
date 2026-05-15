@@ -3,13 +3,14 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { NoteModel } from "../../types/note";
 import NoteItem from "./NoteItem/NoteItem";
-import { Box } from "@mui/material"; // Импортируем Box из MUI
+import { Box } from "@mui/material";
 
 interface SortableNoteItemProps {
   note: NoteModel;
   isEditing: boolean;
   onUpdate: (note: NoteModel) => void;
   onDelete: (id: string) => void;
+  backgroundColor?: string;
 }
 
 export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
@@ -17,6 +18,7 @@ export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
   isEditing,
   onUpdate,
   onDelete,
+  backgroundColor,
 }) => {
   const {
     attributes,
@@ -55,6 +57,7 @@ export const SortableNoteItem: React.FC<SortableNoteItemProps> = ({
         isEditing={isEditing}
         onUpdate={onUpdate}
         onDelete={onDelete}
+        backgroundColor={backgroundColor}
         dragHandleProps={
           isEditing
             ? {

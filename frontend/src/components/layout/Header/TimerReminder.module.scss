@@ -27,6 +27,16 @@
   animation: fadeIn 0.3s ease;
 }
 
+.periodDaysText {
+  min-height: rem(18);
+  font-size: rem(16);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .root {
     align-items: center;
@@ -44,6 +54,13 @@
     font-size: rem(14);
     line-height: 1.2;
     text-align: center;
+    white-space: nowrap;
+  }
+
+  .periodDaysText {
+    min-height: rem(16);
+    font-size: rem(14);
+    line-height: 1.2;
     white-space: nowrap;
   }
 }

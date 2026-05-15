@@ -54,6 +54,7 @@ const BUDGET_PLAN_EXAMPLE = {
       title: "Платеж по долгу",
       amount: 8000,
       priority: true,
+      badge: "debt",
     },
   ],
   desiredItems: [
@@ -61,11 +62,13 @@ const BUDGET_PLAN_EXAMPLE = {
       title: "Цель",
       amount: 18000,
       priority: false,
+      badge: "goal",
     },
   ],
   notes: [
+    "Свободные деньги после плана: 37000 ₽. На 31 день это около 1190 ₽ в день сверх уже заложенных расходов.",
     "На еду, транспорт и бытовые мелочи заложено 22000 ₽, это около 710 ₽ в день.",
-    "На цель можно отложить 18000 ₽ сейчас и оставить 37000 ₽ резервом.",
+    "На цель можно отложить 18000 ₽ сейчас и не трогать резерв 37000 ₽.",
   ],
   warnings: [],
 };
@@ -947,6 +950,13 @@ const saveBudgetSnapshotForUser = async (userId, snapshot) => {
 const sumAmounts = (items = []) =>
   items.reduce((sum, item) => sum + Math.max(0, Number(item.amount) || 0), 0);
 
+const parseAmountFromText = (value = "") => {
+  const normalizedValue = String(value).replace(/\s/g, "").replace(",", ".");
+  const amountMatch = normalizedValue.match(/\d+(?:\.\d+)?/);
+
+  return Math.max(0, Math.round(Number(amountMatch?.[0]) || 0));
+};
+
 const parseBudgetDate = (value) => {
   const date = new Date(`${String(value || "").slice(0, 10)}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -963,6 +973,9 @@ const getPeriodDays = (period = {}) => {
   const dayMs = 24 * 60 * 60 * 1000;
   return Math.round((endDate.getTime() - startDate.getTime()) / dayMs) + 1;
 };
+
+const divideAmountByDays = (amount, days) =>
+  days > 0 ? Math.round(amount / days) : 0;
 
 const hasMeaningfulInputItem = (item = {}) =>
   Boolean(
@@ -1057,10 +1070,19 @@ const normalizeInputItem = (item = {}) => ({
   comment: normalizeAiText(item.comment),
 });
 
+const normalizePlanItemBadge = (value) => {
+  const normalizedBadge = normalizeAiText(value).toLowerCase();
+
+  return ["debt", "goal", "asset"].includes(normalizedBadge)
+    ? normalizedBadge
+    : undefined;
+};
+
 const normalizePlanItem = (item = {}) => ({
   title: normalizeAiText(item.title),
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
   priority: Boolean(item.priority),
+  badge: normalizePlanItemBadge(item.badge),
 });
 
 const normalizePlan = (plan = {}, requestPayload) => {
@@ -1120,6 +1142,8 @@ const buildNormalizedBudgetRequest = (payload = {}) => {
       startDate: String(payload?.period?.startDate || ""),
       endDate: String(payload?.period?.endDate || ""),
     },
+    city: normalizeAiText(payload.city),
+    dailySpending: normalizeAiText(payload.dailySpending),
     aiComment: String(payload.aiComment || "").trim(),
     sections: {
       income: Array.isArray(sections.income)
@@ -1152,6 +1176,10 @@ const validateBudgetPlanRequest = (payload) => {
   if (!Array.isArray(payload?.sections?.income) || payload.sections.income.length === 0) {
     throw createHttpError("At least one income item is required.", 400);
   }
+
+  if (!Array.isArray(payload?.sections?.required) || payload.sections.required.length === 0) {
+    throw createHttpError("At least one required expense item is required.", 400);
+  }
 };
 
 const buildSystemPrompt = () => `
@@ -1173,12 +1201,20 @@ const buildSystemPrompt = () => `
 Правила качества плана:
 - обязательные траты должны покрывать критически важные потребности и регулярные платежи;
 - еду, транспорт, лекарства и бытовые мелочи нужно закладывать в requiredItems как базовые расходы, если пользователь не указал их явно;
-- если точной суммы на базовые расходы нет, оцени ее осторожно по доходу, периоду и свободному остатку; не превышай доступный бюджет;
-- если пользователь указал долги, добавь платеж по долгу в requiredItems. Если указана сумма долга, но нет платежа на период, предложи посильный платеж и объясни это в notes;
+- если пользователь указал дневные траты, используй это как желаемый дневной лимит на еду, транспорт и базовые потребности, а не как отдельный необязательный расход;
+- если точной суммы на базовые расходы нет, оцени ее осторожно по доходу, периоду, городу и свободному остатку; не превышай доступный бюджет без явного предупреждения;
+- если пользователь указал долги, каждый долг должен попасть в requiredItems. Если сумма долга слишком большая для периода, добавь посильный платеж в requiredItems и объясни остаток в notes или warnings;
+- для пунктов, созданных из долгов, добавляй badge: "debt";
 - если в долге есть кому, когда или сколько платить, обязательно используй это в названии пункта или в notes;
-- если пользователь указал цель, добавь посильный взнос на цель в desiredItems, если это не ломает обязательные расходы и резерв;
-- если пользователь указал активы, не превращай их автоматически в доход; дай в notes конкретный совет, как использовать актив или почему лучше его не трогать;
+- если пользователь указал цель, добавь посильный взнос на цель в desiredItems. Перенеси цель в requiredItems только если дедлайн попадает в период или близко к нему и после обязательных трат остается достаточно денег;
+- для пунктов, созданных из целей, добавляй badge: "goal";
+- если пользователь указал цель, добавь короткую notes по цели: сколько реально отложить сейчас; если отложить нельзя, укажи, какую трату сократить, срок сдвинуть или какой минимальный взнос попробовать;
+- если пользователь указал активы, действуй по принципу "не навреди": не превращай их автоматически в доход или расход. Обязательно добавь отдельную notes с безопасным советом, что делать с активом: сохранить, использовать частично, не трогать или направить на дефицит;
+- если актив нужно использовать как действие в плане, добавляй badge: "asset", но не советуй рисковые операции, кредиты, плечо или продажу нужных активов без крайней необходимости;
+- если пользователь указал город, учитывай его как ориентир стоимости жизни, но не выдавай статистику как точный факт без данных;
 - необязательные траты можно сокращать, объединять или откладывать ради баланса;
+- после формирования requiredItems и desiredItems пересчитай totals: reserveAmount = incomeTotal - requiredTotal - desiredTotal;
+- notes[0] обязательна всегда: напиши свободные деньги или дефицит после всего плана, а также лимит в день на период. Если есть dailySpending, сравни его с расчетным лимитом и скажи, хватает ли денег на такой режим;
 - если после расходов остается резерв, рассчитай, как его использовать: дневной лимит, накопление, подушка или цель;
 - summary: один короткий вывод до 180 символов, без общих фраз;
 - notes: количество зависит от данных; если данных мало, достаточно 1-2 пунктов notes, чтобы вместе с summary получилось до 3 карточек; если есть долги, активы, цели или важный комментарий, можно добавить больше, но без воды;
@@ -1186,6 +1222,8 @@ const buildSystemPrompt = () => `
 - warnings: это не советы, а только риски. Заполняй warnings, если есть дефицит, нестабильный доход, долг без понятного платежа, просрочка, обязательные расходы выше дохода или конфликт данных;
 - не повторяй одну и ту же мысль в summary, notes и warnings;
 - не пиши общие советы вроде "стоит добавить регулярные расходы", если можно дать расчет;
+- не начинай title с "Долг:" или "Цель:"; принадлежность пункта передавай через badge;
+- у пунктов requiredItems и desiredItems допустимы только поля title, amount, priority, badge. badge можно опустить; если есть, он должен быть только "debt", "goal" или "asset";
 - не используй emoji, markdown, кавычки-елочки, спецсимволы, символ � или декоративные знаки; допустимы только обычная русская пунктуация, цифры и знак ₽.
 - ответ должен быть только одним валидным json-объектом без markdown и пояснений вне json.
 `.trim();
@@ -1193,17 +1231,31 @@ const buildSystemPrompt = () => `
 const buildUserPrompt = (payload) => {
   const notesLimit = getAiNotesLimit(payload);
   const totals = {
+    periodDays: getPeriodDays(payload.period),
     incomeTotal: sumAmounts(payload.sections.income),
     requiredInputTotal: sumAmounts(payload.sections.required),
     desiredInputTotal: sumAmounts(payload.sections.desired),
     assetsTotal: sumAmounts(payload.sections.assets),
     debtsTotal: sumAmounts(payload.sections.debts),
     goalsTotal: sumAmounts(payload.sections.goals),
-    periodDays: getPeriodDays(payload.period),
+    dailySpending: payload.dailySpending,
+    dailySpendingAmount: parseAmountFromText(payload.dailySpending),
     meaningfulItemsCount: countMeaningfulItems(payload.sections),
     contextItemsCount: getContextItemsCount(payload.sections),
     everydayExpensesAlreadyProvided: hasEverydayExpenses(payload.sections),
+    hasCity: Boolean(payload.city),
+    hasDailySpending: Boolean(payload.dailySpending),
+    hasAssets: getMeaningfulItems(payload.sections.assets).length > 0,
+    hasDebts: getMeaningfulItems(payload.sections.debts).length > 0,
+    hasGoals: getMeaningfulItems(payload.sections.goals).length > 0,
   };
+  totals.dailySpendingForPeriod = totals.dailySpendingAmount * totals.periodDays;
+  totals.freeMoneyByInput =
+    totals.incomeTotal - totals.requiredInputTotal - totals.desiredInputTotal;
+  totals.freeMoneyByInputPerDay = divideAmountByDays(
+    totals.freeMoneyByInput,
+    totals.periodDays,
+  );
 
   return [
     "Составь план бюджета на основе этих данных пользователя.",
@@ -1211,8 +1263,13 @@ const buildUserPrompt = (payload) => {
     "Используй строго эти ключи верхнего уровня: summary, totals, requiredItems, desiredItems, notes, warnings.",
     `Ориентир для notes по этим данным: до ${notesLimit} пунктов. Не добавляй пункт ради количества.`,
     `В warnings верни не больше ${MAX_AI_WARNINGS} пунктов и только реальные риски.`,
-    "В requiredItems заложи еду, транспорт и бытовые мелочи, если их нет во входных расходах. В notes дай дневной лимит по этим тратам.",
-    "Если есть цель, рассчитай посильный взнос на нее. Если есть долги, отрази платеж в обязательных тратах. Если есть активы, дай практичный совет по их использованию.",
+    "Сначала собери requiredItems и desiredItems, потом пересчитай totals по этим пунктам. reserveAmount должен быть остатком после всего плана.",
+    "notes[0] должна быть расчетной: свободные деньги или дефицит после плана, сумма в день на период, сравнение с dailySpending если пользователь его указал.",
+    "В requiredItems заложи еду, транспорт и бытовые мелочи, если их нет во входных расходах. Если dailySpending указан, используй его как базу для расчета, но адаптируй к бюджету и городу.",
+    "Если city указан, используй его как контекст стоимости жизни и не называй точные средние цены или доходы без входных данных.",
+    "Если есть долги, каждый долг должен быть в requiredItems с badge: \"debt\". Если есть цель, рассчитай посильный взнос в desiredItems или в requiredItems при срочном дедлайне и достатке денег, добавь badge: \"goal\".",
+    "Если есть цель, добавь короткую notes по цели: сколько можно отложить сейчас. Если денег нет, предложи одно конкретное действие: сократить необязательную трату, уменьшить взнос или сдвинуть срок.",
+    "Если есть активы, действуй по принципу \"не навреди\": не добавляй их в доходы или расходы без необходимости. Добавь отдельную notes с безопасным советом по использованию активов. Если создаешь действие из актива, добавь badge: \"asset\".",
     "Формат объекта-образца:",
     JSON.stringify(BUDGET_PLAN_EXAMPLE, null, 2),
     "",

@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ChecklistItemModel } from "../../../types/checklist-item";
+import {
+  ChecklistItemBadge,
+  ChecklistItemModel,
+} from "../../../types/checklist-item";
 import { Box } from "@mui/material";
 import { pxToRem } from "../../../styles/units";
 import { publicImageSrc } from "../../../utils/publicImageSrc";
@@ -15,6 +18,12 @@ const trashIconSrc = publicImageSrc("trash.png");
 const trashOpenIconSrc = publicImageSrc("trash_open.png");
 const starIconSrc = publicImageSrc("star.png");
 const dragIconSrc = publicImageSrc("drag.png");
+
+const BADGE_LABELS: Record<ChecklistItemBadge, string> = {
+  debt: "долг",
+  goal: "цель",
+  asset: "актив",
+};
 
 interface ChecklistItemProps {
   item: ChecklistItemModel;
@@ -42,19 +51,18 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const isEditingTitleRef = useRef(isEditingTitle);
+  const isEditingAmountRef = useRef(isEditingAmount);
 
-  // Определяем цвет обводки для приоритетного пункта
   const getPriorityBorderColor = (): string => {
     const darkCellColors = ["#D87B7B", "#507B5D", "#69B5D3"];
     return darkCellColors.includes(backgroundColor) ? "#FFDFDF" : "#D87B7B";
   };
 
-  // Если пункт выполнен, НЕ показываем звездочку в режиме редактирования
   const shouldShowPriorityStar = () => {
     return isEditing && !item.completed;
   };
 
-  // Обработчик сохранения названия
   const handleTitleSave = useCallback(() => {
     const nextTitle = tempTitle.trim();
 
@@ -65,7 +73,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     setIsEditingTitle(false);
   }, [item, onUpdate, tempTitle]);
 
-  // Обработчик сохранения суммы
   const handleAmountSave = useCallback(() => {
     const amount = parseFloat(tempAmount);
     if (!isNaN(amount) && amount >= 0 && amount !== item.amount) {
@@ -75,7 +82,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     setIsEditingAmount(false);
   }, [item, onUpdate, tempAmount]);
 
-  // Обработчик нажатия клавиш
   const handleTitleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleTitleSave();
     if (e.key === "Escape") {
@@ -92,7 +98,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     }
   };
 
-  // Обработчик клика вне поля ввода
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -118,7 +123,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     };
   }, [handleAmountSave, handleTitleSave, isEditingAmount, isEditingTitle]);
 
-  // Фокус на инпут при начале редактирования
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
@@ -128,18 +132,25 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     }
   }, [isEditingTitle, isEditingAmount]);
 
-  // Синхронизируем локальное отображение после внешних обновлений, но не мешаем живому редактированию.
   useEffect(() => {
-    if (!isEditingTitle) {
-      setTempTitle(item.title);
-    }
-  }, [isEditingTitle, item.title]);
+    isEditingTitleRef.current = isEditingTitle;
+  }, [isEditingTitle]);
 
   useEffect(() => {
-    if (!isEditingAmount) {
+    isEditingAmountRef.current = isEditingAmount;
+  }, [isEditingAmount]);
+
+  useEffect(() => {
+    if (!isEditingTitleRef.current) {
+      setTempTitle(item.title);
+    }
+  }, [item.title]);
+
+  useEffect(() => {
+    if (!isEditingAmountRef.current) {
       setTempAmount(item.amount.toString());
     }
-  }, [isEditingAmount, item.amount]);
+  }, [item.amount]);
 
   const togglePriority = () => {
     onUpdate(item.togglePriority());
@@ -150,7 +161,14 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
     "--checkbox-color": backgroundColor,
     "--completed-strike-color": backgroundColor,
     "--completed-strike-left": isEditing ? pxToRem(95) : pxToRem(54),
-    "--completed-strike-right": isEditing ? pxToRem(60) : pxToRem(15),
+    "--completed-strike-right": item.badge
+      ? isEditing
+        ? pxToRem(150)
+        : pxToRem(95)
+      : isEditing
+        ? pxToRem(60)
+        : pxToRem(15),
+    "--badge-color": backgroundColor,
   } as React.CSSProperties;
   const parsedAmount = Number.parseFloat(tempAmount);
   const displayAmount = Number.isFinite(parsedAmount)
@@ -169,7 +187,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         item.completed ? styles.itemCompleted : ""
       }`}
     >
-      {/* Левая часть: ручка для drag и управление пунктом */}
       <Box
         className={`${styles.left} ${
           isEditing ? styles.leftEditing : styles.leftReadonly
@@ -189,12 +206,12 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
               alt=""
               aria-hidden="true"
               className={styles.dragHandleIcon}
+              draggable={false}
             />
           </button>
         )}
 
         {shouldShowPriorityStar() ? (
-          // В режиме редактирования для невыполненных - звездочка приоритета
           <div
             onClick={togglePriority}
             className={styles.iconButton}
@@ -216,7 +233,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
             />
           </div>
         ) : (
-          // Для выполненных или в режиме просмотра - чекбокс
           <div
             onClick={() => onToggle(item.id)}
             className={`${styles.checkbox} ${
@@ -228,7 +244,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-      {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ: название пункта - только для редактирования текста */}
       <Box className={styles.content}>
         {isEditing && isEditingTitle ? (
           <input
@@ -253,7 +268,10 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-      {/* ПРАВАЯ ЧАСТЬ: сумма - только для редактирования */}
+      {item.badge && (
+        <div className={styles.badge}>{BADGE_LABELS[item.badge]}</div>
+      )}
+
       <Box
         className={`${styles.amountWrap} ${
           isEditing ? styles.amountWrapEditing : ""
@@ -285,7 +303,6 @@ export const ChecklistItem: React.FC<ChecklistItemProps> = ({
         )}
       </Box>
 
-      {/* Кнопка удаления (только в режиме редактирования) */}
       {isEditing && (
         <Box className={styles.deleteWrap}>
           <div

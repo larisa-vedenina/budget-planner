@@ -13,13 +13,11 @@ interface FormInputItemProps {
   borderColor: string;
 }
 
-// Держим сумму в безопасном виде, даже если пользователь вводит мусор.
 const parseAmountValue = (value: string): number => {
   const parsedValue = Number.parseFloat(value);
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 };
 
-// Все редактируемые сегменты используют одинаковую внутреннюю типографику.
 const fieldSx = (fontSize: string) => ({
   height: "100%",
   "& .MuiInputBase-root": {
@@ -41,7 +39,6 @@ const fieldSx = (fontSize: string) => ({
   },
 });
 
-// При входе в режим редактирования сразу фокусируем поле и выделяем текст.
 const focusAndSelect = <
   T extends HTMLInputElement | HTMLTextAreaElement,
 >(
@@ -71,7 +68,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
   const amountInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
-  // Синхронизируем локальное редактируемое состояние с внешними обновлениями.
   useEffect(() => {
     setEditText(item.text);
   }, [item.text]);
@@ -102,7 +98,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
     }
   }, [isEditingComment]);
 
-  // Сохраняем только реально измененный текст сегмента.
   const handleSaveText = () => {
     if (editText.trim() !== item.text) {
       onUpdate({ text: editText.trim() });
@@ -110,7 +105,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
     setIsEditingText(false);
   };
 
-  // Нормализуем сумму перед сохранением.
   const handleSaveAmount = () => {
     const amountValue = parseAmountValue(editAmount);
     if (amountValue !== item.amount) {
@@ -119,7 +113,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
     setIsEditingAmount(false);
   };
 
-  // Пустой комментарий не сохраняем как строку.
   const handleSaveComment = () => {
     if (editComment.trim() !== (item.comment || "")) {
       onUpdate({ comment: editComment.trim() || undefined });
@@ -127,7 +120,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
     setIsEditingComment(false);
   };
 
-  // Enter подтверждает редактирование, Escape возвращает исходное значение.
   const handleKeyDown = (
     event: React.KeyboardEvent,
     type: "text" | "amount" | "comment",
@@ -155,7 +147,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
     }
   };
 
-  // Форматируем сумму так же, как пользователь видит ее в бюджете.
   const formatAmount = (amount: number) => `${amount.toLocaleString("ru-RU")}₽`;
 
   return (
@@ -169,7 +160,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
       }
       >
         <Box className={styles.segmentRow}>
-          {/* Первый сегмент хранит описание пункта. */}
           <Box className={`${styles.segment} ${styles.textSegment}`}>
             {isEditingText ? (
               <TextField
@@ -207,7 +197,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             )}
           </Box>
 
-          {/* Второй сегмент отвечает только за сумму. */}
           <Box className={`${styles.segment} ${styles.amountSegment}`}>
             {isEditingAmount ? (
               <TextField
@@ -243,7 +232,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
             )}
           </Box>
 
-          {/* Третий сегмент рендерим только если комментарий действительно есть. */}
           {(item.comment || isEditingComment) && (
             <Box className={`${styles.segment} ${styles.commentSegment}`}>
               {isEditingComment ? (
@@ -284,7 +272,6 @@ const FormInputItem: React.FC<FormInputItemProps> = ({
           )}
         </Box>
 
-        {/* Кнопка удаления вынесена отдельно, чтобы не ломать ширину сегментов. */}
         <IconButton
           onClick={onRemove}
           size="small"

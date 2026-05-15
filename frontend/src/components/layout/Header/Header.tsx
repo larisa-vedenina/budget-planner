@@ -20,7 +20,13 @@ export const Header: React.FC<HeaderProps> = ({
   isEditMode,
   onToggleEditMode,
 }) => {
-  const { updateBudgetIncome, updatePeriod } = useBudget();
+  const {
+    updateBudgetIncome,
+    updatePeriod,
+    refreshAIPlan,
+    canRefreshAIPlan,
+    isRefreshingAIPlan,
+  } = useBudget();
   const isMobile = useMediaQuery("(max-width:768px)");
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -235,11 +241,29 @@ export const Header: React.FC<HeaderProps> = ({
       </Box>
 
       <Box className={styles.actionsBlock}>
-        <LockToggle
-          isLocked={!isEditMode}
-          onToggle={onToggleEditMode}
-          size="medium"
-        />
+        <div className={styles.lockAction}>
+          <LockToggle
+            isLocked={!isEditMode}
+            onToggle={onToggleEditMode}
+            size="medium"
+          />
+        </div>
+        {isEditMode && (
+          <button
+            type="button"
+            className={styles.aiRefreshButton}
+            onClick={refreshAIPlan}
+            disabled={!canRefreshAIPlan}
+            title="Обновить план с ИИ"
+          >
+            <span className={styles.aiRefreshText}>
+              {isRefreshingAIPlan ? "План обновляется" : "Обновить с ИИ"}
+            </span>
+            <span className={styles.aiRefreshTextMobile}>
+              {isRefreshingAIPlan ? "..." : "ИИ"}
+            </span>
+          </button>
+        )}
         <ProfileMenu />
       </Box>
     </header>

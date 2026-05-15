@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChecklistItemModel } from "../../types/checklist-item";
 import ChecklistItem from "./ChecklistItem/ChecklistItem";
-import { Box } from "@mui/material"; // Импортируем Box из MUI
+import { Box } from "@mui/material";
 
 interface SortableChecklistItemProps {
   item: ChecklistItemModel;

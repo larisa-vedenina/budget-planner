@@ -40,10 +40,10 @@
 .backButton {
   min-height: rem(36);
   padding: rem(10) rem(18);
-  border: rem(2) solid var(--color-accent-green);
+  border: rem(2) solid var(--page-background-archive);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--shadow-accent-green);
+  box-shadow: var(--shadow-surface-green-soft);
   color: var(--color-text-primary);
   font-size: rem(16);
   font-weight: 400;
@@ -64,7 +64,7 @@
 }
 
 .createWrap {
-  margin-top: rem(50);
+  margin-top: 0;
 }
 
 .createButton {
