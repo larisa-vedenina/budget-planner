@@ -198,7 +198,7 @@ const FormPage: React.FC = () => {
     hasPeriod && hasBudgetInput && hasRequiredExpenses;
   const canCreateBudget = isCreateBudgetReady && !isSubmitting;
   const createButtonText = isSubmitting
-    ? "AI создает план..."
+    ? "ИИ создает план..."
     : !hasBudgetInput || !hasRequiredExpenses
       ? "введи доход и траты"
       : !hasPeriod
@@ -298,7 +298,7 @@ const FormPage: React.FC = () => {
 
   const handleAICommentChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      applyFormChange("Изменение комментария для AI", {
+      applyFormChange("Изменение комментария для ИИ", {
         ...formData,
         aiComment: e.target.value,
       });
@@ -385,7 +385,7 @@ const FormPage: React.FC = () => {
       clearFormDraft();
       navigate("/main", { state: createReturnState(returnPath) });
     } catch (error) {
-      console.error("Не удалось сгенерировать AI-план бюджета:", error);
+      console.error("Не удалось сгенерировать ИИ-план бюджета:", error);
 
       const fallbackBudget = formDataToBudget(formData);
 
@@ -393,7 +393,7 @@ const FormPage: React.FC = () => {
         ...fallbackBudget,
         notes: [
           NoteModel.createAINote(
-            "Пока не получилось собрать AI-план, поэтому здесь базовый черновик. Можешь подправить его вручную и попробовать еще раз позже.",
+            "Пока не получилось собрать ИИ-план, поэтому здесь базовый черновик. Можешь подправить его вручную и попробовать еще раз позже.",
           ),
           ...fallbackBudget.notes,
         ],

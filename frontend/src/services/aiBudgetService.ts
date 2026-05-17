@@ -16,7 +16,7 @@ export const generateAIBudgetPlan = async (
     );
 
     if (!response.data.success) {
-      throw new Error(response.data.message || "AI budget generation failed.");
+      throw new Error(response.data.message || "Не получилось создать ИИ-план бюджета.");
     }
 
     return response.data.data;
@@ -25,7 +25,7 @@ export const generateAIBudgetPlan = async (
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to connect to AI budget service.",
+          "Не получилось подключиться к сервису ИИ-плана.",
       );
     }
 

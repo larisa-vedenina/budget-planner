@@ -791,12 +791,12 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
         aiPlanSignature: createAIRefreshSignature(budget),
       });
 
-      addToHistory("Обновление AI-плана", updatedBudget);
+      addToHistory("Обновление ИИ-плана", updatedBudget);
       setCurrentBudget(updatedBudget);
       switchToViewMode();
     } catch (error) {
-      console.error("Не удалось обновить AI-план:", error);
-      window.alert("Не получилось обновить AI-план. Попробуй еще раз позже.");
+      console.error("Не удалось обновить ИИ-план:", error);
+      window.alert("Не получилось обновить ИИ-план. Попробуй еще раз позже.");
     } finally {
       setIsRefreshingAIPlan(false);
     }

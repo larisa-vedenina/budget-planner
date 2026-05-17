@@ -32,36 +32,67 @@ const normalizeAIText = (value: string): string =>
     .replace(/[ \t\r\n]+/g, " ")
     .trim();
 
+const isAutoCalculationLikeNote = (value: string): boolean => {
+  const normalizedValue = value.toLowerCase();
+  const hasCalculationKeyword =
+    /(свободн|дефицит|остает|остат|резерв)/i.test(normalizedValue);
+  const hasLimitKeyword = /(день|недел|после|лимит)/i.test(normalizedValue);
+  const hasEverydayExpenseKeyword =
+    /(еда|продукт|транспорт|быт|бытов|проезд|метро|такси)/i.test(
+      normalizedValue,
+    );
+
+  return (
+    (hasCalculationKeyword && hasLimitKeyword) ||
+    (hasEverydayExpenseKeyword && hasLimitKeyword)
+  );
+};
+
+const getNoteDedupeKey = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^0-9a-zа-яё\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const createChecklistItemsFromAI = (
   items: AIBudgetPlanItem[],
   category: "required" | "desired",
 ): ChecklistItemModel[] =>
-  items.map(
-    (item, index) =>
-      new ChecklistItemModel(
-        `ai_${category}_${Date.now()}_${index}`,
-        normalizeAIText(item.title) || "Без названия",
-        normalizeAmount(item.amount),
-        false,
-        category,
-        item.priority ? "priority" : "default",
-        undefined,
-        "idle",
-        new Date(),
-        item.badge,
-      ),
-  );
+  items
+    .filter((item) => normalizeAmount(item.amount) > 0)
+    .map(
+      (item, index) =>
+        new ChecklistItemModel(
+          `ai_${category}_${Date.now()}_${index}`,
+          normalizeAIText(item.title) || "Без названия",
+          normalizeAmount(item.amount),
+          false,
+          category,
+          item.priority ? "priority" : "default",
+          undefined,
+          "idle",
+          new Date(),
+          item.badge,
+        ),
+    );
 
 export const buildAINotesFromPlan = (
   aiPlan: AIBudgetPlanResponse,
 ): NoteModel[] => {
   const rawNotes = [
-    aiPlan.summary,
     ...aiPlan.notes,
     ...aiPlan.warnings,
   ]
     .map(normalizeAIText)
     .filter(Boolean)
+    .filter((note) => !isAutoCalculationLikeNote(note))
+    .filter((note, index, notes) => {
+      const noteKey = getNoteDedupeKey(note);
+      return (
+        notes.findIndex((item) => getNoteDedupeKey(item) === noteKey) === index
+      );
+    })
     .slice(0, MAX_AI_NOTE_ITEMS);
 
   return rawNotes.map((note, index) =>

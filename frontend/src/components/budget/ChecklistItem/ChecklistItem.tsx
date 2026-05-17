@@ -22,7 +22,6 @@ const dragIconSrc = publicImageSrc("drag.png");
 const BADGE_LABELS: Record<ChecklistItemBadge, string> = {
   debt: "долг",
   goal: "цель",
-  asset: "актив",
 };
 
 interface ChecklistItemProps {

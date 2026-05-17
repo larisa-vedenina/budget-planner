@@ -1,7 +1,7 @@
 export type ChecklistCategory = "required" | "desired";
 export type PriorityColor = "default" | "priority";
 export type DragState = "idle" | "dragging" | "hover";
-export type ChecklistItemBadge = "debt" | "goal" | "asset";
+export type ChecklistItemBadge = "debt" | "goal";
 
 export interface IChecklistItem {
   id: string;

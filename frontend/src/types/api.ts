@@ -30,7 +30,7 @@ export interface AIBudgetPlanItem {
   title: string;
   amount: number;
   priority: boolean;
-  badge?: "debt" | "goal" | "asset";
+  badge?: "debt" | "goal";
 }
 
 export interface AIBudgetPlanResponse {

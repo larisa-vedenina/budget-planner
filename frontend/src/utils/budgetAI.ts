@@ -354,20 +354,6 @@ export const withCalculatedBudgetNote = (
     "ai",
     existingCalculatedNote?.createdAt ?? new Date(),
   );
-  const existingCalculatedNoteIndex = budget.notes.findIndex(
-    (note) => note.id === CALCULATED_BUDGET_NOTE_ID,
-  );
-
-  if (existingCalculatedNoteIndex !== -1) {
-    const nextNotes = budget.notes.map((note) =>
-      note.id === CALCULATED_BUDGET_NOTE_ID ? calculatedNote : note,
-    );
-
-    return {
-      ...budget,
-      notes: nextNotes,
-    };
-  }
 
   return {
     ...budget,
