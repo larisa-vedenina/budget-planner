@@ -426,7 +426,9 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
   return (
     <Box
-      className={`${styles.card} ${isNotesColumn ? styles.notesCard : ""}`}
+      className={`${styles.card} ${isNotesColumn ? styles.notesCard : ""} ${
+        isEditMode ? styles.cardEditable : ""
+      }`}
       style={
         {
           "--budget-card-bg": backgroundColor,

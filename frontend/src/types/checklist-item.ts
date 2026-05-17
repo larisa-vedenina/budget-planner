@@ -14,6 +14,7 @@ export interface IChecklistItem {
   dragState?: DragState;
   createdAt: Date;
   badge?: ChecklistItemBadge;
+  dateLabel?: string;
 }
 
 export class ChecklistItemModel implements IChecklistItem {
@@ -28,6 +29,7 @@ export class ChecklistItemModel implements IChecklistItem {
     public dragState: DragState = "idle",
     public createdAt: Date = new Date(),
     public badge?: ChecklistItemBadge,
+    public dateLabel?: string,
   ) {}
 
   static createDefault(category: ChecklistCategory): ChecklistItemModel {
@@ -56,6 +58,7 @@ export class ChecklistItemModel implements IChecklistItem {
       this.dragState,
       this.createdAt,
       this.badge,
+      this.dateLabel,
     );
   }
 
@@ -71,6 +74,23 @@ export class ChecklistItemModel implements IChecklistItem {
       this.dragState,
       this.createdAt,
       this.badge,
+      this.dateLabel,
+    );
+  }
+
+  updateDateLabel(newDateLabel?: string): ChecklistItemModel {
+    return new ChecklistItemModel(
+      this.id,
+      this.title,
+      this.amount,
+      this.completed,
+      this.category,
+      this.priority,
+      this.completedAt,
+      this.dragState,
+      this.createdAt,
+      this.badge,
+      newDateLabel,
     );
   }
 
@@ -88,6 +108,7 @@ export class ChecklistItemModel implements IChecklistItem {
       this.dragState,
       this.createdAt,
       this.badge,
+      this.dateLabel,
     );
   }
 
@@ -103,6 +124,7 @@ export class ChecklistItemModel implements IChecklistItem {
       this.dragState,
       this.createdAt,
       this.badge,
+      this.dateLabel,
     );
   }
 }

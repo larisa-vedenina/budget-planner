@@ -36,13 +36,13 @@ import {
   saveRemoteBudgetSnapshot,
 } from "../services/budgetSyncService";
 import { generateAIBudgetPlan } from "../services/aiBudgetService";
-import { buildAINotesFromPlan } from "../utils/aiBudgetPlanToBudget";
+import { applyAIPlanToBudget } from "../utils/aiBudgetPlanToBudget";
 import {
-  CALCULATED_BUDGET_NOTE_ID,
   canBuildAIRefreshRequest,
   createAIBudgetPlanRequestFromBudget,
   createAIRefreshSignature,
   hasSignificantAIPlanChanges,
+  isCalculatedBudgetNoteId,
   isGeneratedAINote,
   withCalculatedBudgetNote,
 } from "../utils/budgetAI";
@@ -602,6 +602,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
         itemToMove.dragState,
         itemToMove.createdAt,
         itemToMove.badge,
+        itemToMove.dateLabel,
       );
 
       const updatedSourceItems = sourceItems.filter(
@@ -659,7 +660,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteNote = (id: string) => {
     const budget = currentBudget || fallbackBudget;
-    const isDeletingCalculatedBudgetNote = id === CALCULATED_BUDGET_NOTE_ID;
+    const isDeletingCalculatedBudgetNote = isCalculatedBudgetNoteId(id);
 
     const updatedBudget = updateBudgetWithRecalculation(budget, {
       notes: budget.notes.filter((note) => note.id !== id),
@@ -781,14 +782,13 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({
     try {
       const requestPayload = createAIBudgetPlanRequestFromBudget(budget);
       const aiPlan = await generateAIBudgetPlan(requestPayload);
-      const generatedAINotes = buildAINotesFromPlan(aiPlan);
       const preservedNotes = budget.notes.filter(
         (note) => !isGeneratedAINote(note),
       );
-
-      const updatedBudget = updateBudgetWithRecalculation(budget, {
-        notes: [...generatedAINotes, ...preservedNotes],
-        aiPlanSignature: createAIRefreshSignature(budget),
+      const budgetWithAIPlan = applyAIPlanToBudget(budget, aiPlan, preservedNotes);
+      const recalculatedBudget = updateBudgetWithRecalculation(budgetWithAIPlan, {});
+      const updatedBudget = updateBudgetWithRecalculation(recalculatedBudget, {
+        aiPlanSignature: createAIRefreshSignature(recalculatedBudget),
       });
 
       addToHistory("Обновление ИИ-плана", updatedBudget);

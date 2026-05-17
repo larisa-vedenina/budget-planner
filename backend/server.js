@@ -32,37 +32,39 @@ const RESEND_EMAILS_URL = "https://api.resend.com/emails";
 const FRONTEND_BUILD_DIR = path.resolve(__dirname, "../frontend/build");
 
 const BUDGET_PLAN_EXAMPLE = {
-  summary: "План помещается в доход, долг учтен в периоде, цель отложена посильно.",
+  summary: "План покрывает обязательные платежи и оставляет посильный взнос на цель.",
   totals: {
     incomeTotal: 120000,
     requiredTotal: 43000,
-    desiredTotal: 18000,
-    reserveAmount: 59000,
+    desiredTotal: 12000,
+    reserveAmount: 65000,
   },
   requiredItems: [
     {
       title: "Аренда",
       amount: 35000,
       priority: true,
+      date: "1 июня",
     },
     {
       title: "Платеж по долгу",
       amount: 8000,
       priority: true,
       badge: "debt",
+      date: "20 июня",
     },
   ],
   desiredItems: [
     {
-      title: "Цель",
-      amount: 18000,
+      title: "Париж",
+      amount: 12000,
       priority: false,
       badge: "goal",
+      date: "конец августа",
     },
   ],
   notes: [
-    "На цель можно отложить 18000 ₽ сейчас и оставить резерв 59000 ₽.",
-    "Если есть платеж после периода, не добавляй его в пункты этого бюджета, а вынеси в напоминание.",
+    "На Париж можно выделить 12 000 ₽ в этом периоде. Остальную сумму лучше планировать в следующих бюджетах.",
   ],
   warnings: [],
 };
@@ -1062,6 +1064,8 @@ const normalizeInputItem = (item = {}) => ({
   text: normalizeAiText(item.text),
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
   comment: normalizeAiText(item.comment),
+  date: normalizeAiText(item.date),
+  badge: normalizePlanItemBadge(item.badge),
 });
 
 const RUSSIAN_MONTHS = {
@@ -1151,7 +1155,10 @@ const parseContextDateFromText = (value, period = {}) => {
 };
 
 const getItemContextDate = (item = {}, period = {}) =>
-  parseContextDateFromText(`${item.text || ""} ${item.comment || ""}`, period);
+  parseContextDateFromText(
+    `${item.text || ""} ${item.comment || ""} ${item.date || ""}`,
+    period,
+  );
 
 const isAfterBudgetPeriod = (date, period = {}) => {
   const periodEnd = parseBudgetDate(period.endDate);
@@ -1185,6 +1192,26 @@ const doesPlanItemMatchInputItem = (planItem = {}, inputItem = {}) => {
   return inputTokens.length > 0 ? hasTextMatch : hasAmountMatch;
 };
 
+const isDebtLikeInputItem = (item = {}) => {
+  const itemText = normalizeSearchText(`${item.text || ""} ${item.comment || ""}`);
+
+  return (
+    item.badge === "debt" ||
+    /\b(долг|долж|вернуть|платеж|платёж|погас)\b/i.test(itemText)
+  );
+};
+
+const getDebtContextItems = (requestPayload = {}) =>
+  [
+    ...getMeaningfulItems(requestPayload.sections?.debts),
+    ...getMeaningfulItems(requestPayload.sections?.required).filter(
+      isDebtLikeInputItem,
+    ),
+    ...getMeaningfulItems(requestPayload.sections?.desired).filter(
+      isDebtLikeInputItem,
+    ),
+  ];
+
 const shouldKeepPlanItem = (planItem = {}, requestPayload = {}) => {
   if (!planItem.title || planItem.amount <= 0) {
     return false;
@@ -1194,7 +1221,7 @@ const shouldKeepPlanItem = (planItem = {}, requestPayload = {}) => {
     return true;
   }
 
-  const outsidePlanDebt = getMeaningfulItems(requestPayload.sections?.debts)
+  const outsidePlanDebt = getDebtContextItems(requestPayload)
     .filter((debt) => isDebtOutsideBudgetPlan(debt, requestPayload.period))
     .find((debt) => doesPlanItemMatchInputItem(planItem, debt));
 
@@ -1212,7 +1239,7 @@ const formatRubles = (amount) =>
   `${Math.round(Number(amount) || 0).toLocaleString("ru-RU").replace(/\s/g, " ")} ₽`;
 
 const buildOutOfPeriodDebtReminders = (requestPayload = {}) =>
-  getMeaningfulItems(requestPayload.sections?.debts)
+  getDebtContextItems(requestPayload)
     .map((debt) => ({
       debt,
       dueDate: getItemContextDate(debt, requestPayload.period),
@@ -1232,23 +1259,28 @@ const buildOutOfPeriodDebtReminders = (requestPayload = {}) =>
 const isOutOfPeriodDebtNote = (value, requestPayload = {}) => {
   const noteText = normalizeSearchText(value);
 
-  return getMeaningfulItems(requestPayload.sections?.debts)
+  return getDebtContextItems(requestPayload)
     .filter((debt) => isDebtOutsideBudgetPlan(debt, requestPayload.period))
     .some((debt) => {
       const debtTokens = normalizeSearchText(debt.text)
         .split(" ")
         .filter((token) => token.length >= 3);
+      const noteDigits = noteText.replace(/\D/g, "");
+      const debtAmountDigits = String(Math.round(debt.amount));
       const hasTextMatch = debtTokens.some((token) => noteText.includes(token));
       const hasAmountMatch =
-        debt.amount > 0 && noteText.includes(String(Math.round(debt.amount)));
+        debt.amount > 0 && noteDigits.includes(debtAmountDigits);
+      const isDebtLikeNote =
+        /\b(долг|долж|вернуть|платеж|платёж|погас)\b/i.test(noteText);
 
-      return debtTokens.length > 0 ? hasTextMatch : hasAmountMatch;
+      return hasTextMatch || (hasAmountMatch && isDebtLikeNote);
     });
 };
 
 const isCalculatedLikeNote = (value) => {
   const text = normalizeAiText(value).toLowerCase();
-  const hasCalculationKeyword = /(свободн|дефицит|остает|остат|резерв)/i.test(text);
+  const hasCalculationKeyword =
+    /(свободн|дефицит|остает|остат|резерв|доступн|комфорт)/i.test(text);
   const hasLimitKeyword = /(день|недел|после|лимит)/i.test(text);
   const hasEverydayExpenseKeyword =
     /(еда|продукт|транспорт|быт|бытов|проезд|метро|такси)/i.test(text);
@@ -1272,6 +1304,7 @@ const normalizePlanItem = (item = {}) => ({
   amount: Math.max(0, Math.round(Number(item.amount) || 0)),
   priority: Boolean(item.priority),
   badge: normalizePlanItemBadge(item.badge),
+  date: normalizeAiText(item.date || item.dueDate || item.deadline),
 });
 
 const normalizePlan = (plan = {}, requestPayload) => {
@@ -1401,44 +1434,55 @@ const buildSystemPrompt = () => `
 - писать на русском языке;
 - обращаться к пользователю на "ты"; не использовать "вы", "ваш", "рассмотрите";
 - делать названия пунктов короткими и удобными для UI карточек;
-- добавляй срок в title только если без него непонятно, какой это платеж;
+- если у пункта есть срок, верни его в поле date и не дублируй срок в title;
+- добавляй срок в title только если без него непонятно, какой это платеж и поле date не подходит;
+- date бери только из данных пользователя; не придумывай сроки;
 - не предлагай новые источники дохода и не создавай доходные операции, которых нет во входных данных;
 - не добавлять комментариев вне JSON.
 
 Правила качества плана:
 - обязательные траты должны покрывать критически важные потребности и регулярные платежи;
+- не урезай обязательные расходы пользователя, кроме явных дублей или ошибок;
 - если обязательные траты превышают доход, desiredItems можно урезать до 0, а reserveAmount может быть отрицательным;
-- не добавляй еду, транспорт и быт в requiredItems или desiredItems, если пользователь не внес их как отдельные расходы;
-- еда, транспорт, лекарства и бытовые мелочи остаются частью свободных денег и дневного лимита, если пользователь не указал их явно;
+- еда, транспорт, лекарства и бытовые мелочи не создаются отдельными пунктами, если пользователь не указал их явно;
 - если пользователь указал дневные траты, используй это только как контекст комфорта пользователя, а не как отдельный расход или отдельный расчет в notes;
 - не создавай отдельные расчеты свободных денег, дневных или недельных лимитов: приложение делает это автоматически;
-- если пользователь указал долг и срок возврата попадает в период бюджета, добавь этот долг в requiredItems;
-- если срок долга позже конца периода, не добавляй его в requiredItems или desiredItems и не создавай пункт с 0 ₽; вынеси его в одну notes как напоминание;
-- если срок долга не указан, не добавляй его в requiredItems или desiredItems; вынеси долг в notes как напоминание без суммы 0 ₽;
+- при повторном обновлении sections.required и sections.desired уже содержат текущие пункты плана; верни полный обновленный список requiredItems и desiredItems, а не только новые пункты;
+- если текущий пункт в required или desired содержит badge или слова "цель", "долг", "актив", обработай его по тем же правилам, что данные из отдельных блоков формы;
+- добавляй долг в requiredItems только если срок возврата попадает в период бюджета;
+- если срок долга позже конца периода или срок не указан, не добавляй его в requiredItems, desiredItems, notes или warnings. Такие долги обрабатывает сервер отдельным напоминанием;
 - для пунктов, созданных из долгов, добавляй badge: "debt";
-- если в долге есть кому, когда или сколько платить, обязательно используй это в названии пункта или в notes;
-- если пользователь указал цель, добавь посильный взнос на цель в desiredItems. Перенеси цель в requiredItems только если дедлайн попадает в период или близко к нему и после обязательных трат остается достаточно денег;
+- если долг попал в requiredItems, укажи получателя в title, а срок платежа вынеси в date;
+- если цель пришла из sections.goals или текущего пункта без badge со словом "цель", считай amount желаемой суммой цели, а не готовым расходом этого периода;
+- если текущий пункт уже имеет badge: "goal", считай amount текущим запланированным взносом; корректируй его только если изменились доход, обязательные траты или период;
+- посильный взнос по цели не должен превышать остаток после обязательных расходов и уже выбранных необязательных трат;
+- если остатка мало, уменьши взнос до реалистичной суммы или не добавляй цель в items;
+- для цели вне периода рассчитай посильный взнос именно на текущий период и верни его amount в desiredItems; не оставляй в пункте полную сумму цели, если ее нельзя разумно закрыть в текущем периоде;
+- перенеси цель в requiredItems только если дедлайн попадает в период бюджета и после обязательных расходов хватает денег на взнос;
 - для пунктов, созданных из целей, добавляй badge: "goal";
 - добавляй notes по цели только если цель не удалось включить в items или если нужен перенос срока, уменьшение взноса или сокращение других трат;
 - не повторяй цель в notes, если она уже понятно отражена в desiredItems или requiredItems;
+- не используй формулировки "удалось отложить", "отложено", "уже накоплено"; пиши как совет: "можно выделить", "получится отложить", "лучше запланировать";
 - не создавай requiredItems или desiredItems из активов; активы можно упоминать только в notes или warnings;
-- если актив влияет на финансовую устойчивость плана, можно добавить одну короткую notes с осторожным действием без продажи или рискованных операций;
+- добавляй notes по активам только при дефиците, нехватке денег на обязательные расходы или если пользователь сам просит использовать актив;
 - если пользователь указал город, используй его только для оценки общей нагрузки бюджета, без конкретных цен, зарплат и статистики;
 - необязательные траты можно сокращать, объединять или откладывать ради баланса;
-- totals — технический объект, сервер пересчитает его по items; верни числовые поля, но не опирайся на них в notes;
-- summary: один короткий вывод до 180 символов, без общих фраз;
+- totals заполни числами по returned items. Не делай на основе totals отдельные notes или warnings. Сервер пересчитает totals после ответа;
+- summary: один короткий вывод до 180 символов, без общих фраз, без расчета свободных денег, дневного или недельного лимита;
 - notes добавляй только если они содержат новое действие, срок, ограничение или риск, которого нет в items, summary или warnings;
 - каждый пункт notes должен содержать конкретное действие, дату, сумму или ограничение;
-- warnings должны содержать только конкретные финансовые риски: дефицит, просрочку, нехватку денег на обязательные платежи или неопределенный долг. Не добавляй общие рекомендации;
+- warnings должны содержать только конкретные финансовые риски: дефицит, просрочку, нехватку денег на обязательные платежи или нестабильный доход, если это явно видно из данных. Не добавляй общие рекомендации;
 - не повторяй одну и ту же мысль в summary, notes и warnings;
 - если одна мысль уже есть в notes, не повторяй ее в warnings;
+- не создавай несколько пунктов или заметок про один и тот же долг, цель, актив или расход, даже если они названы по-разному;
 - priority ставь только для срочных или критичных пунктов; не помечай все обязательные пункты приоритетными автоматически;
 - не пиши общие советы вроде "стоит добавить регулярные расходы", если можно дать расчет;
 - не начинай title с "Долг:" или "Цель:"; принадлежность пункта передавай через badge;
-- у пунктов requiredItems и desiredItems допустимы только поля title, amount, priority, badge;
-- amount должен быть целым числом больше 0; не возвращай пустые title, null, строки вместо чисел или пункты с 0 ₽;
+- у пунктов requiredItems и desiredItems допустимы только поля title, amount, priority, badge, date;
+- amount должен быть целым числом больше 0, всегда в рублях, без копеек и без символа ₽; не возвращай пустые title, null, строки вместо чисел или пункты с 0 ₽;
 - badge можно опустить; если есть, он должен быть только "debt" или "goal";
-- не создавай дублирующиеся title: объедини похожие пункты;
+- date можно опустить; если есть, он должен быть коротким сроком из данных пользователя: "май", "30 мая", "1 июня", без года, если год совпадает с периодом;
+- не создавай дублирующиеся title или смысловые дубли: объедини похожие пункты;
 - не используй emoji, markdown, кавычки-елочки, unicode-декор, символ � или декоративные знаки; допустимы обычная русская пунктуация, цифры, скобки, дефис, проценты и знак ₽.
 - ответ должен быть только одним валидным json-объектом без markdown и пояснений вне json.
 `.trim();
@@ -1476,17 +1520,24 @@ const buildUserPrompt = (payload) => {
     "Составь план бюджета на основе этих данных пользователя.",
     "Верни только валидный json-объект.",
     "Используй строго эти ключи верхнего уровня: summary, totals, requiredItems, desiredItems, notes, warnings.",
-    "totals верни как числовой объект, но сервер пересчитает totals по items.",
+    "totals заполни числами по returned items, но не делай на их основе notes или warnings: сервер пересчитает totals после ответа.",
     `Максимум notes по этим данным: ${notesLimit}. Не добавляй notes ради количества.`,
     `В warnings верни не больше ${MAX_AI_WARNINGS} пунктов и только реальные риски.`,
-    "Сначала собери requiredItems и desiredItems. Не возвращай пункты с пустым title или amount 0.",
+    "Сначала собери полный обновленный список requiredItems и desiredItems. Не возвращай пункты с пустым title или amount 0.",
+    "Если у пункта есть срок из данных пользователя, верни его в поле date, а title оставь коротким.",
     "Не добавляй отдельную notes про свободные деньги или дневной лимит: приложение рассчитает ее само.",
-    "Не добавляй еду, транспорт и бытовые мелочи в requiredItems, если пользователь не внес их как отдельные расходы. dailySpending используй только как контекст комфорта.",
+    "Не добавляй еду, транспорт, лекарства и бытовые мелочи в requiredItems или desiredItems, если пользователь не внес их как отдельные расходы. dailySpending используй только как контекст комфорта.",
     "Если city указан, используй его только как контекст нагрузки бюджета без точных средних цен или доходов.",
-    "Если долг нужно вернуть внутри периода, добавь его в requiredItems с badge: \"debt\". Если срок позже конца периода или срок не указан, не добавляй пункт и вынеси долг в одну notes.",
-    "Если есть цель, рассчитай посильный взнос в desiredItems или в requiredItems при срочном дедлайне и достатке денег, добавь badge: \"goal\".",
+    "Если в текущих required или desired есть пункт со словом \"цель\", \"долг\", \"актив\" или badge, обработай его как цель, долг или актив даже если он был добавлен уже после формы.",
+    "Если долг нужно вернуть внутри периода, добавь его в requiredItems с badge: \"debt\". Если срок позже конца периода или срок не указан, полностью пропусти этот долг: не добавляй его в items, notes или warnings.",
+    "Если цель пришла из sections.goals или текущего пункта без badge со словом \"цель\", считай amount желаемой суммой цели и рассчитай посильный взнос на текущий период.",
+    "Если текущий пункт уже имеет badge: \"goal\", считай amount текущим взносом, а не полной целью. Корректируй его только при изменении дохода, обязательных трат или периода.",
+    "Посильный взнос по цели не должен превышать остаток после обязательных расходов и уже выбранных необязательных трат.",
+    "Верни цель в desiredItems как посильный взнос. Переноси цель в requiredItems только если дедлайн попадает в период бюджета и после обязательных расходов хватает денег.",
     "Добавляй notes по цели только если цель не удалось включить в items или если нужен перенос срока, уменьшение взноса или сокращение других трат.",
-    "Активы не превращай в requiredItems или desiredItems. Можно добавить одну осторожную notes по активам, только если она влияет на финансовую устойчивость плана.",
+    "В notes по цели используй формулировки \"можно выделить\", \"получится отложить\", \"лучше запланировать\". Не пиши \"удалось отложить\" или \"уже отложено\".",
+    "Активы не превращай в requiredItems или desiredItems. Добавь notes по активам только при дефиците, нехватке денег на обязательные расходы или если пользователь сам просит использовать актив.",
+    "Не создавай несколько пунктов или заметок про один и тот же долг, цель, актив или расход, даже если они названы по-разному.",
     "Формат объекта-образца:",
     JSON.stringify(BUDGET_PLAN_EXAMPLE, null, 2),
     "",

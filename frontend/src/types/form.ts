@@ -12,6 +12,8 @@ export interface FormInputItem {
   text: string;
   amount: number;
   comment?: string;
+  date?: string;
+  badge?: "debt" | "goal";
 }
 
 export interface FormSection {

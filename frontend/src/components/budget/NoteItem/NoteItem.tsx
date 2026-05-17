@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { NoteModel } from "../../../types/note";
 import { Box } from "@mui/material";
 import { publicImageSrc } from "../../../utils/publicImageSrc";
-import { CALCULATED_BUDGET_NOTE_ID } from "../../../utils/budgetAI";
+import { isCalculatedBudgetNoteId } from "../../../utils/budgetAI";
 import styles from "./NoteItem.module.scss";
 
 interface DragHandleProps {
@@ -24,7 +24,7 @@ interface NoteItemProps {
   dragHandleProps?: DragHandleProps;
 }
 
-const amountLimitPattern = /(\d[\d\s]* ₽)(?=\s+в\s+(?:день|неделю))/u;
+const rubleAmountPattern = /(\d[\d\s]* ₽)/u;
 
 export const NoteItem: React.FC<NoteItemProps> = ({
   note,
@@ -38,7 +38,7 @@ export const NoteItem: React.FC<NoteItemProps> = ({
   const [tempContent, setTempContent] = useState(note.content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEditingContentRef = useRef(isEditingContent);
-  const isCalculatedBudgetNote = note.id === CALCULATED_BUDGET_NOTE_ID;
+  const isCalculatedBudgetNote = isCalculatedBudgetNoteId(note.id);
   const canEditText = isEditing && !isCalculatedBudgetNote;
 
   const syncTextareaHeight = useCallback(() => {
@@ -64,22 +64,19 @@ export const NoteItem: React.FC<NoteItemProps> = ({
         {displayContent.split("\n").map((line, index) => {
           const separatorIndex = line.indexOf(":");
           const renderLineContent = (lineContent: string) => {
-            const match = lineContent.match(amountLimitPattern);
+            const parts = lineContent.split(rubleAmountPattern);
 
-            if (!match || match.index === undefined) {
-              return lineContent;
-            }
-
-            const amount = match[0];
-            const prefix = lineContent.slice(0, match.index);
-            const suffix = lineContent.slice(match.index + amount.length);
-
-            return (
-              <>
-                {prefix}
-                <span className={styles.calculatedAmount}>{amount}</span>
-                {suffix}
-              </>
+            return parts.map((part, partIndex) =>
+              rubleAmountPattern.test(part) ? (
+                <span
+                  key={`${part}_${partIndex}`}
+                  className={styles.calculatedAmount}
+                >
+                  {part}
+                </span>
+              ) : (
+                part
+              ),
             );
           };
 

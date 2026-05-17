@@ -4,9 +4,10 @@
   display: flex;
   width: calc(100% - rem(8));
   max-width: calc(100% - rem(8));
+  min-width: 0;
   align-items: center;
   justify-content: flex-start;
-  gap: rem(12);
+  gap: 0;
   background: var(--item-bg, var(--color-white));
   color: var(--color-text-primary);
   border: rem(2) solid var(--item-border, var(--color-white));
@@ -31,7 +32,7 @@
 }
 
 .itemReadonly {
-  gap: rem(4);
+  gap: 0;
 }
 
 .itemEditable:hover {
@@ -46,8 +47,8 @@
 .itemCompleted::after {
   content: "";
   position: absolute;
-  left: var(--completed-strike-left, rem(95));
-  right: var(--completed-strike-right, rem(15));
+  left: rem(38);
+  right: rem(15);
   top: 50%;
   height: rem(1);
   background: var(--completed-strike-color, var(--checkbox-color));
@@ -55,6 +56,10 @@
   transform: translateY(-50%);
   pointer-events: none;
   opacity: 0.95;
+}
+
+.itemEditable.itemCompleted::after {
+  right: rem(55);
 }
 
 .left {
@@ -178,9 +183,17 @@
   background: var(--checkbox-color, var(--color-white));
 }
 
-.content {
+.titleGroup {
   flex: 1 1 auto;
-  margin-right: rem(16);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.content {
+  flex: 0 1 auto;
+  width: var(--item-title-width, fit-content);
+  max-width: 100%;
   min-width: 0;
   min-height: rem(36);
   display: flex;
@@ -188,12 +201,18 @@
   overflow: hidden;
 }
 
-.leftReadonly + .content {
+.leftReadonly + .titleGroup {
   margin-left: rem(20);
+}
+
+.contentEditing {
+  flex: 0 1 auto;
 }
 
 .textInput {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: rem(40);
   min-height: rem(40);
   border: none;
@@ -205,16 +224,24 @@
   background: transparent;
   outline: none;
   box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .textDisplay {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: rem(40);
-  display: flex;
-  align-items: center;
+  display: block;
   padding: rem(4) 0;
   font-size: rem(24);
+  line-height: 1.35;
   color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .textDisplayEditable {
@@ -228,9 +255,57 @@
 .amountWrap {
   width: fit-content;
   min-width: 0;
-  margin-left: rem(8);
   text-align: right;
   flex-shrink: 0;
+}
+
+.dateLabel {
+  flex: 0 1 auto;
+  max-width: rem(112);
+  min-width: rem(56);
+  margin-left: rem(8);
+  color: var(--color-text-secondary, #8a8a8a);
+  font-size: rem(16);
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dateInput {
+  flex: 0 1 auto;
+  width: auto;
+  max-width: rem(112);
+  min-width: rem(56);
+  margin-left: rem(8);
+  border: none;
+  padding: 0;
+  color: var(--color-text-secondary, #8a8a8a);
+  font-size: rem(16);
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dateLabelEditable {
+  cursor: text;
+}
+
+.metaGroup {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+  min-width: 0;
+  margin-left: rem(16);
 }
 
 .amountWrapEditing {
@@ -289,7 +364,6 @@
 }
 
 .deleteWrap {
-  margin-left: rem(8);
   min-width: rem(32);
   display: flex;
   justify-content: center;
@@ -345,7 +419,6 @@
   align-items: center;
   justify-content: center;
   padding: rem(4) rem(10) rem(5);
-  margin-left: rem(8);
   border: rem(1) solid var(--badge-color, var(--color-accent-red));
   border-radius: rem(5);
   color: var(--badge-color, var(--color-accent-red));
@@ -361,15 +434,29 @@
 
 @media (max-width: 768px) {
   .item {
-    width: 98%;
+    width: 99%;
     max-width: 100%;
     flex-wrap: nowrap;
     align-items: center;
-    gap: rem(8);
+    gap: 0;
     min-height: rem(50);
     height: rem(50);
-    padding: rem(8) rem(10);
+    padding: rem(8) rem(6);
     margin: 0 0 rem(10);
+  }
+
+  .itemCompleted::after {
+    left: rem(29);
+    right: rem(6);
+  }
+
+  .itemEditable.itemCompleted::after {
+    right: rem(35);
+  }
+
+  .itemEditable:hover {
+    transform: none;
+    box-shadow: var(--budget-card-shadow, var(--shadow-neutral-edit));
   }
 
   .left {
@@ -398,30 +485,49 @@
     min-width: 0;
     width: auto;
     max-width: none;
-    margin-right: rem(4);
+    margin-right: 0;
+    height: rem(24);
     min-height: rem(24);
   }
 
-  .leftReadonly + .content {
+  .leftReadonly + .titleGroup {
     margin-left: rem(8);
   }
 
   .textInput,
   .textDisplay {
+    height: rem(24);
     min-height: rem(24);
     padding: 0;
     font-size: rem(16);
-    line-height: 1.2;
+    line-height: rem(24);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .textDisplay {
+    display: flex;
+    align-items: center;
+  }
+
   .amountWrap {
     width: auto;
     min-width: 0;
-    margin-left: rem(4);
     text-align: right;
+  }
+
+  .dateLabel,
+  .dateInput {
+    max-width: rem(54);
+    min-width: rem(34);
+    margin-left: rem(4);
+    font-size: rem(12);
+  }
+
+  .metaGroup {
+    gap: rem(5);
+    margin-left: rem(8);
   }
 
   .amountEditor,
@@ -431,6 +537,7 @@
     font-size: rem(16);
     line-height: 1.2;
     white-space: nowrap;
+    padding-top: rem(2);
   }
 
   .amountInput,
@@ -445,7 +552,6 @@
 
   .deleteWrap {
     min-width: rem(24);
-    margin-left: rem(4);
   }
 
   .deleteIcon {
@@ -453,9 +559,17 @@
     height: rem(22);
   }
 
+  .iconButton {
+    padding: 0 rem(5) 0 0;
+  }
+
   .starIcon {
     width: rem(22);
     height: rem(22);
+  }
+
+  .dragHandle {
+    width: rem(17);
   }
 
   .dragHandleIcon {
@@ -464,11 +578,10 @@
   }
 
   .badge {
-    width: rem(42);
-    min-width: rem(42);
+    width: rem(35);
+    min-width: rem(35);
     min-height: 1.2rem;
-    padding: rem(2) rem(6) rem(3);
-    margin-left: rem(4);
+    padding: rem(1) rem(3) rem(2);
     border-radius: rem(5);
     font-size: rem(12);
     opacity: 0.7;

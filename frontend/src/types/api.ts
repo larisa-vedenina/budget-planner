@@ -31,6 +31,7 @@ export interface AIBudgetPlanItem {
   amount: number;
   priority: boolean;
   badge?: "debt" | "goal";
+  date?: string;
 }
 
 export interface AIBudgetPlanResponse {

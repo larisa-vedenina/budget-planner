@@ -213,7 +213,7 @@ export const BudgetGrid: React.FC<BudgetGridProps> = ({
       <div
         className={styles.grid}
         style={{
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
           gridTemplateRows: `${requiredHeight}px ${desiredHeight}px`,
         }}
       >

@@ -11,6 +11,9 @@ import { createAIRefreshSignature, createBudgetAIContext } from "./budgetAI";
 
 const GOAL_RESERVE_SHARE = 0.3;
 
+const normalizeDateLabel = (value: string | undefined): string | undefined =>
+  value?.trim() || undefined;
+
 export const parseDateInput = (value: string): Date | null => {
   if (!value) {
     return null;
@@ -29,13 +32,19 @@ const buildChecklistItems = (
   category: "required" | "desired",
 ): ChecklistItemModel[] =>
   items.map(
-    (item) =>
+    (item, index) =>
       new ChecklistItemModel(
         item.id,
         item.text || "Без названия",
         Math.max(0, item.amount || 0),
         false,
         category,
+        "default",
+        undefined,
+        "idle",
+        new Date(Date.now() + index),
+        undefined,
+        normalizeDateLabel(item.comment),
       ),
   );
 
@@ -56,6 +65,7 @@ const buildDebtItems = (items: FormInputItem[] = []): ChecklistItemModel[] =>
         "idle",
         new Date(Date.now() + index),
         "debt",
+        normalizeDateLabel(item.comment),
       ),
   );
 
@@ -88,6 +98,7 @@ const buildGoalItems = (
       "idle",
       new Date(Date.now() + index),
       "goal",
+      normalizeDateLabel(item.comment),
     );
   });
 };

@@ -16,6 +16,7 @@ interface SerializedChecklistItem {
   dragState?: "idle" | "dragging" | "hover";
   createdAt: string;
   badge?: ChecklistItemBadge;
+  dateLabel?: string;
 }
 
 interface SerializedNote {
@@ -89,6 +90,7 @@ export const serializeBudget = (
     dragState: item.dragState,
     createdAt: item.createdAt.toISOString(),
     badge: item.badge,
+    dateLabel: item.dateLabel,
   })),
   desiredItems: budget.desiredItems.map((item) => ({
     id: item.id,
@@ -101,6 +103,7 @@ export const serializeBudget = (
     dragState: item.dragState,
     createdAt: item.createdAt.toISOString(),
     badge: item.badge,
+    dateLabel: item.dateLabel,
   })),
   notes: budget.notes.map((note) => ({
     id: note.id,
@@ -132,6 +135,7 @@ export const deserializeBudget = (
             item.dragState || "idle",
             new Date(item.createdAt),
             item.badge,
+            item.dateLabel,
           ),
       )
     : [],
@@ -149,6 +153,7 @@ export const deserializeBudget = (
             item.dragState || "idle",
             new Date(item.createdAt),
             item.badge,
+            item.dateLabel,
           ),
       )
     : [],

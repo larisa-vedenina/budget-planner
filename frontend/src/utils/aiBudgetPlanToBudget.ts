@@ -1,6 +1,9 @@
 import { AIBudgetPlanItem, AIBudgetPlanResponse } from "../types/api";
 import { BudgetPeriod, createDefaultBudgetPeriod } from "../types/budget";
-import { ChecklistItemModel } from "../types/checklist-item";
+import {
+  ChecklistItemBadge,
+  ChecklistItemModel,
+} from "../types/checklist-item";
 import { NoteModel } from "../types/note";
 import { FormData } from "../types/form";
 import {
@@ -35,7 +38,9 @@ const normalizeAIText = (value: string): string =>
 const isAutoCalculationLikeNote = (value: string): boolean => {
   const normalizedValue = value.toLowerCase();
   const hasCalculationKeyword =
-    /(свободн|дефицит|остает|остат|резерв)/i.test(normalizedValue);
+    /(свободн|дефицит|остает|остат|резерв|доступн|комфорт)/i.test(
+      normalizedValue,
+    );
   const hasLimitKeyword = /(день|недел|после|лимит)/i.test(normalizedValue);
   const hasEverydayExpenseKeyword =
     /(еда|продукт|транспорт|быт|бытов|проезд|метро|такси)/i.test(
@@ -54,6 +59,34 @@ const getNoteDedupeKey = (value: string): string =>
     .replace(/[^0-9a-zа-яё\s]/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+const getItemSearchTokens = (value: string): string[] =>
+  normalizeAIText(value)
+    .toLowerCase()
+    .replace(/[^0-9a-zа-яё\s]/gi, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 3 && !["цель", "долг"].includes(token));
+
+const doesItemMatch = (
+  planItem: AIBudgetPlanItem,
+  existingItem: ChecklistItemModel,
+): boolean => {
+  const planTokens = getItemSearchTokens(planItem.title);
+  const existingTokens = getItemSearchTokens(existingItem.title);
+  const hasTokenMatch = planTokens.some((token) =>
+    existingTokens.includes(token),
+  );
+
+  if (
+    planItem.badge &&
+    existingItem.badge &&
+    planItem.badge === existingItem.badge
+  ) {
+    return hasTokenMatch || planTokens.length === 0 || existingTokens.length === 0;
+  }
+
+  return planTokens.length > 0 && existingTokens.length > 0 && hasTokenMatch;
+};
 
 const createChecklistItemsFromAI = (
   items: AIBudgetPlanItem[],
@@ -74,8 +107,44 @@ const createChecklistItemsFromAI = (
           "idle",
           new Date(),
           item.badge,
+          normalizeAIText(item.date || "") || undefined,
         ),
     );
+
+const mergeChecklistItemsFromAI = (
+  aiItems: AIBudgetPlanItem[],
+  category: "required" | "desired",
+  existingItems: ChecklistItemModel[],
+  usedExistingIds: Set<string>,
+): ChecklistItemModel[] =>
+  aiItems
+    .filter((item) => normalizeAmount(item.amount) > 0)
+    .map((item, index) => {
+      const matchedItem = existingItems.find(
+        (existingItem) =>
+          !usedExistingIds.has(existingItem.id) &&
+          doesItemMatch(item, existingItem),
+      );
+      const badge = item.badge as ChecklistItemBadge | undefined;
+
+      if (matchedItem) {
+        usedExistingIds.add(matchedItem.id);
+      }
+
+      return new ChecklistItemModel(
+        matchedItem?.id ?? `ai_${category}_${Date.now()}_${index}`,
+        normalizeAIText(item.title) || "Без названия",
+        normalizeAmount(item.amount),
+        matchedItem?.completed ?? false,
+        category,
+        item.priority ? "priority" : "default",
+        matchedItem?.completedAt,
+        "idle",
+        matchedItem?.createdAt ?? new Date(),
+        badge,
+        normalizeAIText(item.date || "") || matchedItem?.dateLabel,
+      );
+    });
 
 export const buildAINotesFromPlan = (
   aiPlan: AIBudgetPlanResponse,
@@ -149,5 +218,34 @@ export const aiBudgetPlanToBudget = (
   return {
     ...nextBudget,
     aiPlanSignature: createAIRefreshSignature(nextBudget),
+  };
+};
+
+export const applyAIPlanToBudget = (
+  budget: BudgetPeriod,
+  aiPlan: AIBudgetPlanResponse,
+  preservedNotes: NoteModel[],
+): BudgetPeriod => {
+  const existingItems = budget.requiredItems.concat(budget.desiredItems);
+  const usedExistingIds = new Set<string>();
+  const requiredItems = mergeChecklistItemsFromAI(
+    aiPlan.requiredItems,
+    "required",
+    existingItems,
+    usedExistingIds,
+  );
+  const desiredItems = mergeChecklistItemsFromAI(
+    aiPlan.desiredItems,
+    "desired",
+    existingItems,
+    usedExistingIds,
+  );
+
+  return {
+    ...budget,
+    requiredItems,
+    desiredItems,
+    notes: [...buildAINotesFromPlan(aiPlan), ...preservedNotes],
+    updatedAt: new Date(),
   };
 };

@@ -5,6 +5,12 @@ import { FormData, FormInputItem, SectionType } from "../types/form";
 import { NoteModel } from "../types/note";
 
 export const CALCULATED_BUDGET_NOTE_ID = "ai_calculated_free_money";
+export const COMFORT_DAILY_LIMIT_NOTE_ID = "ai_calculated_comfort_daily_limit";
+
+const CALCULATED_BUDGET_NOTE_IDS = new Set([
+  CALCULATED_BUDGET_NOTE_ID,
+  COMFORT_DAILY_LIMIT_NOTE_ID,
+]);
 
 const getSectionItems = (
   formData: FormData,
@@ -38,6 +44,16 @@ const formatAmount = (amount: number): string =>
 
 const formatRubles = (amount: number): string => `${formatAmount(amount)} ₽`;
 
+const parseAmountFromText = (value: string | undefined): number => {
+  const normalizedValue = String(value ?? "")
+    .replace(/\s/g, "")
+    .replace(",", ".");
+  const amountMatch = normalizedValue.match(/\d+(?:\.\d+)?/);
+  const parsedAmount = amountMatch ? Number(amountMatch[0]) : 0;
+
+  return Number.isFinite(parsedAmount) ? Math.max(0, Math.round(parsedAmount)) : 0;
+};
+
 export const createBudgetAIContext = (formData: FormData): BudgetAIContext => ({
   city: normalizeText(formData.city),
   dailySpending: normalizeText(formData.dailySpending),
@@ -52,6 +68,27 @@ const checklistItemToFormItem = (item: ChecklistItemModel): FormInputItem => ({
   text: item.title,
   amount: item.amount,
   comment: item.completed ? "Уже выполнено" : undefined,
+  date: item.dateLabel,
+  badge: item.badge,
+});
+
+const isContextChecklistItem = (item: ChecklistItemModel): boolean => {
+  const normalizedTitle = normalizeText(item.title).toLowerCase();
+
+  return Boolean(
+    item.badge ||
+      /(цель|долг|актив|накоп|коплю|вернуть|поездк|путешеств)/i.test(
+        normalizedTitle,
+      ),
+  );
+};
+
+const checklistItemToSignatureItem = (item: ChecklistItemModel) => ({
+  id: item.id,
+  title: normalizeText(item.title),
+  amount: Math.round(Number(item.amount) || 0),
+  dateLabel: normalizeText(item.dateLabel),
+  badge: item.badge ?? "",
 });
 
 export const createAIRefreshSignature = (budget: BudgetPeriod): string =>
@@ -59,11 +96,10 @@ export const createAIRefreshSignature = (budget: BudgetPeriod): string =>
     totalIncome: Math.round(Number(budget.totalIncome) || 0),
     startDate: formatDateInput(budget.startDate),
     endDate: formatDateInput(budget.endDate),
-    requiredItems: budget.requiredItems.map((item) => ({
-      id: item.id,
-      title: normalizeText(item.title),
-      amount: Math.round(Number(item.amount) || 0),
-    })),
+    requiredItems: budget.requiredItems.map(checklistItemToSignatureItem),
+    desiredContextItems: budget.desiredItems
+      .filter(isContextChecklistItem)
+      .map(checklistItemToSignatureItem),
   });
 
 interface AIRefreshSignatureData {
@@ -74,6 +110,15 @@ interface AIRefreshSignatureData {
     id: string;
     title: string;
     amount: number;
+    dateLabel: string;
+    badge: string;
+  }>;
+  desiredContextItems: Array<{
+    id: string;
+    title: string;
+    amount: number;
+    dateLabel: string;
+    badge: string;
   }>;
 }
 
@@ -96,7 +141,21 @@ const parseAIRefreshSignature = (
       return null;
     }
 
-    return parsedSignature;
+    return {
+      ...parsedSignature,
+      requiredItems: parsedSignature.requiredItems.map((item) => ({
+        ...item,
+        dateLabel: normalizeText(item.dateLabel),
+        badge: normalizeText(item.badge),
+      })),
+      desiredContextItems: (parsedSignature.desiredContextItems ?? []).map(
+        (item) => ({
+          ...item,
+          dateLabel: normalizeText(item.dateLabel),
+          badge: normalizeText(item.badge),
+        }),
+      ),
+    };
   } catch {
     return null;
   }
@@ -166,6 +225,47 @@ const hasSignificantPeriodChange = (
   return periodLengthChanged || periodShifted;
 };
 
+type AIRefreshSignatureItem =
+  AIRefreshSignatureData["requiredItems"][number];
+
+const hasContextItemsChanged = (
+  previousItems: AIRefreshSignatureItem[],
+  currentItems: AIRefreshSignatureItem[],
+  totalIncome: number,
+): boolean => {
+  const previousItemsById = new Map(previousItems.map((item) => [item.id, item]));
+  const currentItemsById = new Map(currentItems.map((item) => [item.id, item]));
+  const structureChanged =
+    currentItems.some((item) => !previousItemsById.has(item.id)) ||
+    previousItems.some((item) => !currentItemsById.has(item.id));
+
+  if (structureChanged) {
+    return true;
+  }
+
+  return currentItems.some((item) => {
+    const previousItem = previousItemsById.get(item.id);
+
+    if (!previousItem) {
+      return true;
+    }
+
+    const textChanged =
+      previousItem.title !== item.title ||
+      previousItem.dateLabel !== item.dateLabel ||
+      previousItem.badge !== item.badge;
+
+    return (
+      textChanged ||
+      hasSignificantAmountChange(
+        previousItem.amount,
+        item.amount,
+        totalIncome,
+      )
+    );
+  });
+};
+
 export const canBuildAIRefreshRequest = (budget: BudgetPeriod): boolean =>
   budget.totalIncome > 0 &&
   budget.requiredItems.some((item) => item.title.trim() && item.amount > 0);
@@ -226,10 +326,14 @@ export const hasSignificantAIPlanChanges = (budget: BudgetPeriod): boolean => {
       currentSignature.totalIncome,
     );
   });
-  const itemTitleChanged = currentSignature.requiredItems.some((item) => {
+  const itemTextChanged = currentSignature.requiredItems.some((item) => {
     const previousItem = previousItemsById.get(item.id);
 
-    if (!previousItem || previousItem.title === item.title) {
+    if (
+      !previousItem ||
+      (previousItem.title === item.title &&
+        previousItem.dateLabel === item.dateLabel)
+    ) {
       return false;
     }
 
@@ -252,13 +356,19 @@ export const hasSignificantAIPlanChanges = (budget: BudgetPeriod): boolean => {
   const hasRequiredReserve =
     currentSignature.totalIncome - currentRequiredTotal >= 0;
   const reserveSignChanged = hadRequiredReserve !== hasRequiredReserve;
+  const desiredContextChanged = hasContextItemsChanged(
+    previousSignature.desiredContextItems,
+    currentSignature.desiredContextItems,
+    currentSignature.totalIncome,
+  );
 
   return (
     incomeChanged ||
     periodChanged ||
     itemStructureChanged ||
     itemAmountChanged ||
-    itemTitleChanged ||
+    itemTextChanged ||
+    desiredContextChanged ||
     reserveSignChanged
   );
 };
@@ -303,27 +413,72 @@ export const buildCalculatedBudgetNoteContent = (
   const freeMoney = budget.totalIncome - plannedExpenses;
   const periodDays = getPeriodDays(budget);
   const dailyAmount =
-    periodDays > 0 ? Math.round(Math.abs(freeMoney) / periodDays) : 0;
+    periodDays > 0 ? Math.max(0, Math.round(freeMoney / periodDays)) : 0;
   const weeklyAmount =
     periodDays > 0
-      ? Math.round((Math.abs(freeMoney) / periodDays) * Math.min(7, periodDays))
+      ? Math.max(
+          0,
+          Math.round((freeMoney / periodDays) * Math.min(7, periodDays)),
+        )
       : 0;
 
   if (freeMoney < 0) {
+    const shortfallPerDay =
+      periodDays > 0 ? Math.round(Math.abs(freeMoney) / periodDays) : 0;
+    const shortfallPerWeek =
+      periodDays > 0
+        ? Math.round(
+            (Math.abs(freeMoney) / periodDays) * Math.min(7, periodDays),
+          )
+        : 0;
+
     return `Дефицит бюджета: ${formatRubles(
       freeMoney,
-    )}\nНужно сократить расходы примерно на ${formatRubles(
-      dailyAmount,
-    )} в день.\nНужно сократить расходы примерно на ${formatRubles(
-      weeklyAmount,
-    )} в неделю.`;
+    )}\nНужно сократить примерно ${formatRubles(
+      shortfallPerDay,
+    )} в день\nНужно сократить примерно ${formatRubles(shortfallPerWeek)} в неделю`;
   }
 
   return `Свободные деньги: ${formatRubles(
     freeMoney,
   )}\nМожно тратить около ${formatRubles(
     dailyAmount,
-  )} в день\nМожно тратить около ${formatRubles(weeklyAmount)} в неделю`;
+  )} в день\nИли ${formatRubles(weeklyAmount)} в неделю`;
+};
+
+const buildComfortDailyLimitNoteContent = (
+  budget: BudgetPeriod,
+): string => {
+  const comfortDailyLimit = parseAmountFromText(budget.aiContext?.dailySpending);
+
+  if (!comfortDailyLimit) {
+    return "";
+  }
+
+  const plannedExpenses = budget.requiredItems
+    .concat(budget.desiredItems)
+    .reduce((sum, item) => sum + Math.max(0, Number(item.amount) || 0), 0);
+  const freeMoney = budget.totalIncome - plannedExpenses;
+  const periodDays = getPeriodDays(budget);
+  const availableDailyLimit =
+    periodDays > 0 ? Math.max(0, Math.round(freeMoney / periodDays)) : 0;
+  const dailyDiff = Math.abs(availableDailyLimit - comfortDailyLimit);
+
+  if (availableDailyLimit < comfortDailyLimit) {
+    return `Комфортный лимит выше доступного. Сейчас лучше ориентироваться на ${formatRubles(
+      availableDailyLimit,
+    )} в день и сократить привычные траты на ${formatRubles(dailyDiff)} в день.`;
+  }
+
+  if (availableDailyLimit > comfortDailyLimit) {
+    return `Доступный лимит выше комфортного. Можно оставить ${formatRubles(
+      comfortDailyLimit,
+    )} в день и направить лишние ${formatRubles(dailyDiff)} в день на запас или цель.`;
+  }
+
+  return `Комфортный лимит совпадает с доступным: ${formatRubles(
+    availableDailyLimit,
+  )} в день.`;
 };
 
 export const withCalculatedBudgetNote = (
@@ -335,7 +490,7 @@ export const withCalculatedBudgetNote = (
     budget.desiredItems.length > 0;
 
   const notesWithoutCalculated = budget.notes.filter(
-    (note) => note.id !== CALCULATED_BUDGET_NOTE_ID,
+    (note) => !CALCULATED_BUDGET_NOTE_IDS.has(note.id),
   );
 
   if (!hasMeaningfulBudget || budget.isCalculatedBudgetNoteHidden) {
@@ -348,18 +503,36 @@ export const withCalculatedBudgetNote = (
   const existingCalculatedNote = budget.notes.find(
     (note) => note.id === CALCULATED_BUDGET_NOTE_ID,
   );
+  const existingComfortNote = budget.notes.find(
+    (note) => note.id === COMFORT_DAILY_LIMIT_NOTE_ID,
+  );
   const calculatedNote = new NoteModel(
     CALCULATED_BUDGET_NOTE_ID,
     buildCalculatedBudgetNoteContent(budget),
     "ai",
     existingCalculatedNote?.createdAt ?? new Date(),
   );
+  const comfortNoteContent = buildComfortDailyLimitNoteContent(budget);
+  const calculatedNotes = comfortNoteContent
+    ? [
+        calculatedNote,
+        new NoteModel(
+          COMFORT_DAILY_LIMIT_NOTE_ID,
+          comfortNoteContent,
+          "ai",
+          existingComfortNote?.createdAt ?? new Date(),
+        ),
+      ]
+    : [calculatedNote];
 
   return {
     ...budget,
-    notes: [calculatedNote, ...notesWithoutCalculated],
+    notes: [...calculatedNotes, ...notesWithoutCalculated],
   };
 };
 
+export const isCalculatedBudgetNoteId = (noteId: string): boolean =>
+  CALCULATED_BUDGET_NOTE_IDS.has(noteId);
+
 export const isGeneratedAINote = (note: NoteModel): boolean =>
-  note.type === "ai" && note.id !== CALCULATED_BUDGET_NOTE_ID;
+  note.type === "ai" && !isCalculatedBudgetNoteId(note.id);

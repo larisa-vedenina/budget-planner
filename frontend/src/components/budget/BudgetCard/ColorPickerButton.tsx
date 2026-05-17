@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Box, Popover } from "@mui/material";
 import { CellColor } from "../../../types/budget";
+import { publicImageSrc } from "../../../utils/publicImageSrc";
 import styles from "./ColorPickerButton.module.scss";
 
 interface ColorPickerButtonProps {
   currentColor: CellColor;
   onColorChange: (color: CellColor) => void;
 }
+
+const colorPickerImageSrc = publicImageSrc("color_picker.png");
 
 export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
   currentColor,
@@ -34,6 +37,11 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
     "#CAEEFC",
     "#FFE8B9",
   ];
+  const colorAreas = availableColors.map((color, index) => ({
+    color,
+    left: `${(index % 4) * 25}%`,
+    top: `${Math.floor(index / 4) * 50}%`,
+  }));
 
   return (
     <>
@@ -47,7 +55,15 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
         }
         aria-label="Выбрать цвет фона"
         title="Изменить цвет фона"
-      />
+      >
+        <img
+          src={colorPickerImageSrc}
+          alt=""
+          aria-hidden="true"
+          className={styles.triggerImage}
+          draggable={false}
+        />
+      </button>
 
       <Popover
         open={open}
@@ -60,28 +76,38 @@ export const ColorPickerButton: React.FC<ColorPickerButtonProps> = ({
         transitionDuration={0}
         keepMounted
         anchorOrigin={{
-          vertical: "top",
+          vertical: 12,
           horizontal: "left",
         }}
         transformOrigin={{
           vertical: "bottom",
-          horizontal: "left",
+          horizontal: 11,
+        }}
+        PaperProps={{
+          className: styles.palettePaper,
         }}
       >
-        <Box className={styles.palette}>
-          {availableColors.map((color) => (
+        <Box className={styles.palette} role="group" aria-label="Цвета ячейки">
+          <img
+            src={colorPickerImageSrc}
+            alt=""
+            aria-hidden="true"
+            className={styles.paletteImage}
+            draggable={false}
+          />
+
+          {colorAreas.map(({ color, left, top }) => (
             <button
               key={color}
               onClick={() => {
                 onColorChange(color);
                 handleClose();
               }}
-              className={`${styles.swatch} ${
-                color === currentColor ? styles.swatchActive : ""
-              }`}
+              className={styles.paletteHitArea}
               style={
                 {
-                  "--picker-color": color,
+                  "--picker-area-left": left,
+                  "--picker-area-top": top,
                 } as React.CSSProperties
               }
               aria-label={`Выбрать цвет ${color}`}
